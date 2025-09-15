@@ -93,6 +93,8 @@ export class Player {
     this.ui?.setGold?.(this.gold);
     this.ui?.setLevelXP?.(this.level, this.xp, this.xpToNextLevel());
     this.initAbilities();
+    // Баффы
+    this._hasteTimer = 0; this._regenTimer = 0;
 
     // Управление: клики + WASD
     this.moveTarget = null; // точка назначения
@@ -219,6 +221,9 @@ export class Player {
     this.gold += amount;
     this.ui?.setGold?.(this.gold);
   }
+
+  addHaste(seconds) { this._hasteTimer = Math.max(this._hasteTimer, seconds); this.attackSpeed = 1.6; }
+  addRegen(seconds) { this._regenTimer = Math.max(this._regenTimer, seconds); }
 
   initAbilities() {
     // Настоящий набор способностей через фабрику
@@ -351,6 +356,8 @@ export class Player {
 
   update(dt) {
     this.attackTimer = Math.max(0, this.attackTimer - dt);
+    if (this._hasteTimer > 0) { this._hasteTimer = Math.max(0, this._hasteTimer - dt); if (this._hasteTimer === 0) this.attackSpeed = 1.0; }
+    if (this._regenTimer > 0) { this._regenTimer = Math.max(0, this._regenTimer - dt); this.hp = Math.min(this.maxHp, this.hp + 10*dt); this.updateHpBar(); this.ui?.setHP(this.hp); }
     // кулдауны способностей
     if (this.abilities) {
       const remains = {};
