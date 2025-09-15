@@ -1,5 +1,5 @@
 // player.js
-// Логика игрока: WASD-движение, наведение мышью, ЛКМ — стрельба снарядом
+// Логика игрока (MOBA): клик-передвижение, ПКМ — move/attack по цели
 // Модель: GLTF (авокадо как заглушка), простая полоска HP над героем
 
 import * as THREE from "https://unpkg.com/three@0.160.1/build/three.module.js";
@@ -39,7 +39,7 @@ function createHealthBar(width = 2, height = 0.2) {
 }
 
 export class Player {
-  constructor({ scene, loader, camera, raycaster, mouse, arenaSize, ui }) {
+  constructor({ scene, loader, camera, raycaster, mouse, arenaSize, ui, world, team }) {
     this.scene = scene;
     /** @type {GLTFLoader} */ this.loader = loader || new GLTFLoader();
     this.camera = camera;
@@ -47,14 +47,16 @@ export class Player {
     this.mouse = mouse;
     this.arenaSize = arenaSize;
     this.ui = ui;
+    this.world = world;
+    this.team = team ?? 0;
 
     // Параметры игрока
     this.position = new THREE.Vector3(0, 0, 0);
     this.velocity = new THREE.Vector3();
-    this.speed = 12; // м/с
+    this.speed = 10;
     this.hp = 100;
     this.maxHp = 100;
-    this.score = 0;
+    this.unitType = "hero";
 
     // Слои
     this.group = new THREE.Group();
@@ -76,22 +78,19 @@ export class Player {
     this.group.add(this.healthBar);
     this.updateHpBar();
 
-    // Инициализируем HUD значениями HP и Score
+    // Инициализируем HUD значениями HP
     this.ui?.setHP(this.hp);
-    this.ui?.setScore(this.score);
 
-    // Управление
-    this.keys = { w: false, a: false, s: false, d: false };
-    window.addEventListener("keydown", (e) => this.onKey(e, true));
-    window.addEventListener("keyup", (e) => this.onKey(e, false));
+    // Управление кликами
+    this.moveTarget = null; // точка назначения
+    this.attackTarget = null; // выбранная цель
+    window.addEventListener("contextmenu", (e) => e.preventDefault());
+    window.addEventListener("mousedown", (e) => this.onMouseDown(e));
 
-    // Стрельба
-    this.bullets = [];
-    this.fireCooldown = 0.2; // сек
-    this.fireTimer = 0;
-    window.addEventListener("mousedown", (e) => {
-      if (e.button === 0) this.tryFire();
-    });
+    // Бой
+    this.range = 3.5;
+    this.attackCooldown = 0.9;
+    this.attackTimer = 0;
   }
 
   loadModel(url) {
@@ -117,12 +116,36 @@ export class Player {
     });
   }
 
-  onKey(e, down) {
-    const k = e.key.toLowerCase();
-    if (k === "w" || k === "ц") this.keys.w = down;
-    if (k === "a" || k === "ф") this.keys.a = down;
-    if (k === "s" || k === "ы") this.keys.s = down;
-    if (k === "d" || k === "в") this.keys.d = down;
+  onMouseDown(e) {
+    if (e.button !== 2) return; // ПКМ
+    // Луч в мир
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    // Сначала ищем юнитов под курсором (простая проверка через пересечение с их группой)
+    let clickedUnit = null;
+    for (const u of this.world?.units || []) {
+      if (u === this) continue;
+      if (!u.group) continue;
+      const box = new THREE.Box3().setFromObject(u.group);
+      const invMat = new THREE.Matrix4().copy(u.group.matrixWorld).invert();
+      const localRay = this.raycaster.ray.clone();
+      // Оценка: используем глобальный box, без трансформации луча
+      const intersect = box.distanceToPoint(this.raycaster.ray.origin) === 0 || box.intersectsRay(this.raycaster.ray);
+      if (intersect) { clickedUnit = u; break; }
+    }
+
+    if (clickedUnit && clickedUnit.team !== this.team) {
+      // Атаковать цель
+      this.attackTarget = clickedUnit;
+      this.moveTarget = null;
+      return;
+    }
+
+    // Иначе — двигаемся к точке на земле
+    const groundIntersect = this.pickGroundPoint();
+    if (groundIntersect) {
+      this.moveTarget = groundIntersect;
+      this.attackTarget = null;
+    }
   }
 
   addScore(v) {
@@ -164,12 +187,8 @@ export class Player {
     return null;
   }
 
-  aimAtMouse() {
-    // Обновляем лучкастер по мыши и наводим героя на точку на земле
-    this.raycaster.setFromCamera(this.mouse, this.camera);
-    const p = this.screenRayToGroundPoint();
-    if (!p) return;
-    const dir = new THREE.Vector3().subVectors(p, this.group.position);
+  aimAt(pos) {
+    const dir = new THREE.Vector3().subVectors(pos, this.group.position);
     dir.y = 0;
     if (dir.lengthSq() > 0.0001) {
       dir.normalize();
@@ -178,78 +197,62 @@ export class Player {
     }
   }
 
-  tryFire() {
-    if (this.fireTimer > 0) return;
-    this.fireTimer = this.fireCooldown;
-
-    const bullet = createBulletMesh();
-    const muzzleOffset = new THREE.Vector3(0, 1.0, 1.0);
-    const dir = new THREE.Vector3(0, 0, 1).applyEuler(new THREE.Euler(0, this.group.rotation.y, 0));
-    const spawnPos = new THREE.Vector3().copy(this.group.position).addScaledVector(dir, muzzleOffset.z);
-    spawnPos.y += muzzleOffset.y;
-
-    bullet.position.copy(spawnPos);
-    this.scene.add(bullet);
-
-    const projectile = {
-      mesh: bullet,
-      position: bullet.position.clone(),
-      direction: dir.clone(),
-      speed: 28,
-      life: 2.0, // секунды жизни
-      radius: 0.25,
-      damage: 34,
-    };
-    this.bullets.push(projectile);
+  pickGroundPoint() {
+    const ray = this.raycaster.ray;
+    const t = (0 - ray.origin.y) / ray.direction.y;
+    if (t > 0) return new THREE.Vector3().copy(ray.origin).addScaledVector(ray.direction, t);
+    return null;
   }
 
-  updateBullets(dt, enemyManager) {
-    for (let i = this.bullets.length - 1; i >= 0; i--) {
-      const b = this.bullets[i];
-      b.life -= dt;
-      if (b.life <= 0) {
-        this.scene.remove(b.mesh);
-        this.bullets.splice(i, 1);
-        continue;
+  tryAttackTarget() {
+    if (!this.attackTarget || this.attackTarget.isDead?.()) return;
+    const dist = this.group.position.distanceTo(this.attackTarget.position);
+    if (dist <= this.range) {
+      if (this.attackTimer <= 0) {
+        this.attackTimer = this.attackCooldown;
+        this.aimAt(this.attackTarget.position);
+        this.attackTarget.applyDamage?.(28, this);
       }
-      // Перемещение
-      b.position.addScaledVector(b.direction, b.speed * dt);
-      b.mesh.position.copy(b.position);
-
-      // Коллизия с врагами (сферическая проверка)
-      const hit = enemyManager.tryHitEnemy(b.position, b.radius, b.damage);
-      if (hit) {
-        this.scene.remove(b.mesh);
-        this.bullets.splice(i, 1);
-      }
+    } else {
+      // Идём к цели
+      this.moveTowards(this.attackTarget.position);
     }
   }
 
-  update(dt, scene, enemyManager) {
-    // Кулдаун выстрела
-    if (this.fireTimer > 0) this.fireTimer -= dt;
+  moveTowards(targetPos, dtOverride) {
+    const dt = dtOverride ?? 0.016;
+    const dir = new THREE.Vector3().subVectors(targetPos, this.group.position);
+    dir.y = 0;
+    if (dir.lengthSq() < 0.01) return;
+    dir.normalize();
+    this.group.position.addScaledVector(dir, this.speed * dt);
+    this.group.rotation.y = Math.atan2(dir.x, dir.z);
+  }
 
-    // Наведение на мышь
-    this.aimAtMouse();
+  update(dt) {
+    this.attackTimer = Math.max(0, this.attackTimer - dt);
+    // Обновляем луч от мыши (для кликов)
+    this.raycaster.setFromCamera(this.mouse, this.camera);
 
-    // Движение WASD в плоскости XZ
-    const input = new THREE.Vector3(
-      (this.keys.d ? 1 : 0) - (this.keys.a ? 1 : 0),
-      0,
-      (this.keys.s ? 1 : 0) - (this.keys.w ? 1 : 0)
-    );
-    if (input.lengthSq() > 0) input.normalize();
-    this.velocity.copy(input).multiplyScalar(this.speed);
-    this.position.addScaledVector(this.velocity, dt);
+    // Передвижение к выбранной точке
+    if (this.moveTarget) {
+      const dist = this.group.position.distanceTo(this.moveTarget);
+      if (dist < 0.2) this.moveTarget = null;
+      else this.moveTowards(this.moveTarget, dt);
+    }
+
+    // Атака выбранной цели
+    if (this.attackTarget) {
+      this.tryAttackTarget();
+      if (this.attackTarget?.isDead?.()) this.attackTarget = null;
+    }
+
+    // Позиция и бар
+    this.position.copy(this.group.position);
     this.position.y = 0;
     this.clampToArena(this.position);
     this.group.position.copy(this.position);
-
-    // Хелсбар повернуть к камере (билбординг)
     this.healthBar.quaternion.copy(this.camera.quaternion);
-
-    // Обновить пули
-    this.updateBullets(dt, enemyManager);
   }
 }
 

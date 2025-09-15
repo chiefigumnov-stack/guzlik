@@ -9,6 +9,7 @@ import { GLTFLoader } from "https://unpkg.com/three@0.160.1/examples/jsm/loaders
 import { createUI } from "./ui.js";
 import { Player } from "./player.js";
 import { EnemyManager } from "./enemy.js";
+import { MobaWorld, Teams } from "./moba.js";
 import { Network } from "./network.js";
 
 // Глобальные константы сцены
@@ -78,7 +79,8 @@ class Game {
     // Сетевой слой (заглушка)
     this.network = new Network();
 
-    // Игрок
+    // MOBA-мир и игрок как герой Radiant
+    this.world = new MobaWorld({ scene: this.scene, ui: this.ui, arenaSize: ARENA_SIZE });
     this.player = new Player({
       scene: this.scene,
       loader: this.loader,
@@ -87,17 +89,10 @@ class Game {
       mouse: this.mouse,
       arenaSize: ARENA_SIZE,
       ui: this.ui,
+      world: this.world,
+      team: Teams.Radiant,
     });
-
-    // Менеджер врагов
-    this.enemyManager = new EnemyManager({
-      scene: this.scene,
-      loader: this.loader,
-      targetGetter: () => this.player.position,
-      arenaSize: ARENA_SIZE,
-      onPlayerHit: (damage) => this.player.applyDamage(damage),
-      onEnemyKilled: () => this.player.addScore(1),
-    });
+    this.world.registerUnit(this.player);
 
     // Время
     this.clock = new THREE.Clock();
@@ -159,11 +154,9 @@ class Game {
   animate() {
     const dt = Math.min(0.05, this.clock.getDelta());
 
-    // Обновляем игрока (движение, стрельба)
-    this.player.update(dt, this.scene, this.enemyManager);
-
-    // Спавн и логика врагов
-    this.enemyManager.update(dt, this.player);
+    // Обновляем игрока и MOBA-мир
+    this.player.update(dt, this.scene, null);
+    this.world.update(dt, this.player);
 
     // Рендер сцены
     this.renderer.render(this.scene, this.camera);

@@ -10,7 +10,8 @@ export function createUI() {
   topLeft.id = "top-left";
   topLeft.innerHTML = `
     <div>HP: <span id="ui-hp" class="value">100</span></div>
-    <div>Score: <span id="ui-score" class="value">0</span></div>
+    <div>Bases: <span id="ui-base-r" class="value">1000</span> vs <span id="ui-base-d" class="value">1000</span></div>
+    <div>Tip: ПКМ по земле — двигаться; ПКМ по врагу — атаковать</div>
   `;
   root.appendChild(topLeft);
 
@@ -22,20 +23,45 @@ export function createUI() {
   // Нижняя панель
   const bottomBar = document.createElement("div");
   bottomBar.id = "bottom-bar";
-  bottomBar.textContent = "Ammo: ∞ | Abilities: [Q] Dash (N/A), [E] AoE (N/A)";
+  bottomBar.textContent = "Способности: Q W E R (заглушки)";
   root.appendChild(bottomBar);
 
   // Возвращаем API для обновления HUD
   const hpEl = topLeft.querySelector("#ui-hp");
-  const scoreEl = topLeft.querySelector("#ui-score");
+  const baseREl = topLeft.querySelector("#ui-base-r");
+  const baseDEl = topLeft.querySelector("#ui-base-d");
+
+  // Сообщения по центру сверху
+  const announce = document.createElement("div");
+  Object.assign(announce.style, {
+    position: "absolute",
+    top: "50px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    background: "rgba(0,0,0,0.35)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: "8px",
+    padding: "6px 10px",
+    fontSize: "14px",
+    pointerEvents: "none",
+    display: "none",
+  });
+  root.appendChild(announce);
 
   return {
     setHP(value) {
       hpEl.textContent = String(Math.max(0, Math.floor(value)));
     },
-    setScore(value) {
-      scoreEl.textContent = String(value);
+    setBases(r, d) {
+      baseREl.textContent = String(Math.max(0, Math.floor(r)));
+      baseDEl.textContent = String(Math.max(0, Math.floor(d)));
     },
+    announce(msg, ms = 2000) {
+      announce.textContent = msg;
+      announce.style.display = "block";
+      clearTimeout(announce._t);
+      announce._t = setTimeout(() => { announce.style.display = "none"; }, ms);
+    }
   };
 }
 
