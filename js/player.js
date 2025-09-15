@@ -8,10 +8,10 @@ import { HERO_DEFS } from "./heroData.js";
 
 const HERO_URL = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Avocado/glTF/Avocado.gltf";
 
-// Простая геометрия для снаряда (можно заменить на модель)
-function createBulletMesh() {
-  const geometry = new THREE.SphereGeometry(0.2, 12, 12);
-  const material = new THREE.MeshStandardMaterial({ color: 0x66ccff, emissive: 0x112233 });
+// Базовая атакующая геометрия (удар ближнего боя)
+function createMeleeSwingMesh() {
+  const geometry = new THREE.CapsuleGeometry(0.15, 0.6, 4, 8);
+  const material = new THREE.MeshStandardMaterial({ color: 0xffd180, emissive: 0x332200 });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.castShadow = true;
   return mesh;
@@ -102,6 +102,10 @@ export class Player {
 
     // Бой
     this.attackTimer = 0;
+    this.baseAttackCooldown = 0.8;
+    this.attackSpeed = 1.0;
+    this.basicType = def.basicType || 'melee';
+    window.addEventListener('mousedown', (e) => { if (e.button === 0) this.onPrimaryAttack(); });
 
     // Прогресс героя
     this.level = 1;
@@ -299,6 +303,37 @@ export class Player {
       // Идём к цели
       this.moveTowards(this.attackTarget.position);
     }
+  }
+
+  onPrimaryAttack() {
+    if (this.attackTimer > 0) return;
+    this.attackTimer = Math.max(0.1, this.baseAttackCooldown / this.attackSpeed);
+    if (this.basicType === 'melee') {
+      // Короткая дуга перед героем и урон ближайшей цели
+      const forward = new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(0, this.group.rotation.y, 0));
+      const coneDot = Math.cos(70 * Math.PI/180);
+      const range = 2.0;
+      let didHit = false;
+      for (const u of this.world.units) {
+        if (u.team === this.team) continue;
+        if (!u.position) continue;
+        const toU = new THREE.Vector3().subVectors(u.position, this.group.position); toU.y = 0;
+        const dist = toU.length();
+        if (dist <= range) {
+          toU.normalize();
+          if (forward.dot(toU) >= coneDot) {
+            u.applyDamage?.(this.attackDamage, this); didHit = true; break;
+          }
+        }
+      }
+      // Визуал-свинг (кратковременный)
+      const swing = createMeleeSwingMesh();
+      swing.position.copy(this.group.position).add(new THREE.Vector3(0,1.0,0));
+      swing.rotation.y = this.group.rotation.y;
+      this.scene.add(swing);
+      setTimeout(() => this.scene.remove(swing), 120);
+    }
+    // Ranged вариант можно добавить позже
   }
 
   moveTowards(targetPos, dtOverride) {

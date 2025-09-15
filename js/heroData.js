@@ -28,6 +28,7 @@ export const HERO_DEFS = {
     usePortraitBillboard: false,
     // Временная бесплатная стилизованная (аниме-стайл) модель
     modelUrl: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RobotExpressive/glTF-Binary/RobotExpressive.glb",
+    basicType: "melee",
     base: {
       maxHp: 650,
       attackDamage: 30,
