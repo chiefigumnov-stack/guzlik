@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MOBA Prototype - Three.js</title>
+    <style>
+      /* Страница под WebGL канвас + HUD */
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #101418;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+        color: #e6edf3;
+      }
+
+      /* HUD-слои */
+      #hud-root { position: fixed; inset: 0; pointer-events: none; }
+
+      /* Левый верхний угол: HP и счёт */
+      #top-left {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        background: rgba(0,0,0,0.35);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 14px;
+        line-height: 1.35;
+      }
+      #top-left .value { font-weight: 700; color: #8cd6ff; }
+
+      /* Центровой прицел */
+      #crosshair {
+        position: absolute;
+        top: 50%; left: 50%; transform: translate(-50%, -50%);
+        width: 14px; height: 14px;
+        pointer-events: none;
+      }
+      #crosshair::before, #crosshair::after {
+        content: "";
+        position: absolute;
+        background: rgba(255,255,255,0.9);
+        border-radius: 1px;
+      }
+      /* Вертикальная полоска */
+      #crosshair::before { width: 2px; height: 14px; left: 6px; top: 0; }
+      /* Горизонтальная полоска */
+      #crosshair::after { width: 14px; height: 2px; left: 0; top: 6px; }
+
+      /* Нижняя панель: патроны/абилки */
+      #bottom-bar {
+        position: absolute;
+        left: 50%; bottom: 12px; transform: translateX(-50%);
+        padding: 8px 12px;
+        background: rgba(0,0,0,0.35);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        font-size: 14px;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      a, a:visited { color: #8cd6ff; text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <!-- HUD контейнер (создаётся и наполняется в ui.js) -->
+    <div id="hud-root"></div>
+
+    <!-- Основной модуль игры -->
+    <script type="module" src="./js/game.js"></script>
+  </body>
+  </html>
+
