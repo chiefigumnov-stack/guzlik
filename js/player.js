@@ -223,10 +223,17 @@ export class Player {
     };
     this.ui?.setAbilities?.(this.abilities);
     window.addEventListener('keydown', (e) => this.onKeyAbility(e));
+    // Клики по кнопкам
+    const clickInvoke = (key) => { this.onKeyAbility({ key }); };
+    const byId = (id) => document.getElementById(id);
+    byId('ab-Q-btn')?.addEventListener('click', () => clickInvoke('Q'));
+    byId('ab-W-btn')?.addEventListener('click', () => clickInvoke('W'));
+    byId('ab-E-btn')?.addEventListener('click', () => clickInvoke('E'));
+    byId('ab-R-btn')?.addEventListener('click', () => clickInvoke('R'));
   }
 
   onKeyAbility(e) {
-    const k = e.key.toUpperCase();
+    const k = (e.code ? e.code.replace('Key','') : e.key).toUpperCase();
     const ab = this.abilities?.[k];
     if (!ab) return;
     if (ab.timer > 0) return;

@@ -14,6 +14,7 @@ export class MobaWorld {
     this.units = []; // все боевые сущности (игрок, крипы, башни)
     this.creeps = [];
     this.towers = [];
+    this.heroes = [];
 
     // Параметры баз
     this.baseHp = { [Teams.Radiant]: 1000, [Teams.Dire]: 1000 };
@@ -61,11 +62,16 @@ export class MobaWorld {
 
   registerUnit(unit) {
     this.units.push(unit);
+    if (unit.unitType === 'hero') this.heroes.push(unit);
   }
 
   unregisterUnit(unit) {
     const idx = this.units.indexOf(unit);
     if (idx >= 0) this.units.splice(idx, 1);
+    if (unit.unitType === 'hero') {
+      const hi = this.heroes.indexOf(unit);
+      if (hi >= 0) this.heroes.splice(hi, 1);
+    }
   }
 
   getEnemiesAround(position, myTeam, radius) {
@@ -151,6 +157,21 @@ export class MobaWorld {
     } else if (this.isBaseDestroyed(Teams.Dire)) {
       this.ui?.announce?.("Победа: разрушена база Dire");
     }
+    // Простая ИИ логика героя Dire: следовать на мид и атаковать ближайшее
+    this.ensureEnemyHero();
+    if (this.enemyHero) this.updateEnemyHero(dt);
+  }
+
+  ensureEnemyHero() {
+    if (this.enemyHero) return;
+    // заспаунить примитивного героя Dire в базе
+    const h = new AIHero({ scene: this.scene, world: this, team: Teams.Dire, position: this.basePositions[Teams.Dire].clone() });
+    this.enemyHero = h;
+    this.registerUnit(h);
+  }
+
+  updateEnemyHero(dt) {
+    this.enemyHero.update(dt);
   }
 }
 
@@ -334,6 +355,48 @@ class Tower {
     if (target && this.attackTimer <= 0) {
       this.attackTimer = this.attackCooldown;
       target.applyDamage?.(this.damage, this);
+    }
+  }
+}
+
+class AIHero {
+  constructor({ scene, world, team, position }) {
+    this.scene = scene; this.world = world; this.team = team;
+    this.position = position.clone();
+    this.unitType = 'hero';
+    this.range = 3.5; this.damage = 24; this.speed = 8;
+    this.hp = 700; this.maxHp = 700;
+    this.group = new THREE.Group(); this.group.position.copy(this.position);
+    const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 1.2, 4, 12), new THREE.MeshStandardMaterial({ color: 0x3949ab }));
+    mesh.castShadow = true; mesh.receiveShadow = true; this.group.add(mesh);
+    this.scene.add(this.group);
+  }
+
+  isDead() { return this.hp <= 0; }
+  applyDamage(v) { this.hp = Math.max(0, this.hp - v); }
+
+  acquireTarget() {
+    const enemies = this.world.getEnemiesAround(this.group.position, this.team, 8);
+    if (enemies.length === 0) return null;
+    enemies.sort((a,b) => this.group.position.distanceTo(a.position) - this.group.position.distanceTo(b.position));
+    return enemies[0];
+  }
+
+  moveTowards(pos, dt) {
+    const dir = new THREE.Vector3().subVectors(pos, this.group.position); dir.y = 0;
+    const d = dir.length(); if (d < 0.05) return; dir.normalize();
+    this.group.position.addScaledVector(dir, this.speed * dt);
+    this.group.rotation.y = Math.atan2(dir.x, dir.z);
+  }
+
+  update(dt) {
+    // идём к центру, если нет цели
+    const target = this.acquireTarget();
+    if (target) {
+      const dist = this.group.position.distanceTo(target.position);
+      if (dist <= this.range) target.applyDamage?.(this.damage, this); else this.moveTowards(target.position, dt);
+    } else {
+      this.moveTowards(new THREE.Vector3(0,0,0), dt);
     }
   }
 }

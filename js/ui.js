@@ -50,10 +50,10 @@ export function createUI() {
   bottomBar.id = "bottom-bar";
   bottomBar.innerHTML = `
     <span id="ui-abilities">
-      Q: <span id="ab-Q-name">—</span> <span id="ab-Q-cd"></span> | 
-      W: <span id="ab-W-name">—</span> <span id="ab-W-cd"></span> | 
-      E: <span id="ab-E-name">—</span> <span id="ab-E-cd"></span> | 
-      R: <span id="ab-R-name">—</span> <span id="ab-R-cd"></span>
+      <button id="ab-Q-btn" style="pointer-events:auto">Q: <span id="ab-Q-name">—</span> <span id="ab-Q-cd"></span></button>
+      <button id="ab-W-btn" style="pointer-events:auto">W: <span id="ab-W-name">—</span> <span id="ab-W-cd"></span></button>
+      <button id="ab-E-btn" style="pointer-events:auto">E: <span id="ab-E-name">—</span> <span id="ab-E-cd"></span></button>
+      <button id="ab-R-btn" style="pointer-events:auto">R: <span id="ab-R-name">—</span> <span id="ab-R-cd"></span></button>
     </span>
     <div id="ui-ability-desc" style="opacity:0.9;margin-top:4px;font-size:12px;">—</div>
   `;
