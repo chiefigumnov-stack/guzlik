@@ -115,3 +115,14 @@ nohup: ignoring input
 127.0.0.1 - - [15/Sep/2025 09:40:27] "GET /js/moba.js HTTP/1.1" 200 -
 127.0.0.1 - - [15/Sep/2025 09:40:27] "GET /js/projectiles.js HTTP/1.1" 200 -
 127.0.0.1 - - [15/Sep/2025 09:40:27] "GET /js/abilities.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 09:44:46] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 09:44:46] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 09:44:47] "GET /js/ui.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 09:44:47] "GET /js/heroData.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 09:44:50] "GET /js/game.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 09:44:50] "GET /js/player.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 09:44:50] "GET /js/enemy.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 09:44:50] "GET /js/moba.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 09:44:50] "GET /js/projectiles.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 09:44:50] "GET /js/abilities.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 09:44:50] "GET /js/network.js HTTP/1.1" 200 -
