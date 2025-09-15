@@ -138,6 +138,14 @@ export class Player {
     this.loader.load(url, (gltf) => {
       const model = gltf.scene || gltf.scenes?.[0];
       if (!model) return;
+      this.mixer = new THREE.AnimationMixer(model);
+      this.animations = {};
+      if (gltf.animations && gltf.animations.length) {
+        for (const clip of gltf.animations) {
+          const action = this.mixer.clipAction(clip);
+          this.animations[clip.name] = action;
+        }
+      }
       model.traverse((obj) => {
         if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; }
       });
@@ -148,7 +156,25 @@ export class Player {
       model.scale.setScalar(scale);
       model.position.set(0, 0, 0);
       this.heroRoot.add(model);
+      // Запускаем idle-анимацию, если есть
+      this.playAnimationFallback(['Idle','idle','Walk','Walking']);
     });
+  }
+
+  playAnimationFallback(names) {
+    if (!this.animations) return;
+    for (const n of names) {
+      const a = this.animations[n];
+      if (a) { this.fadeToAction(a, 0.2); return; }
+    }
+  }
+
+  fadeToAction(action, duration = 0.2) {
+    if (!action) return;
+    if (this.currentAction === action) return;
+    action.reset().fadeIn(duration).play();
+    if (this.currentAction) this.currentAction.fadeOut(duration);
+    this.currentAction = action;
   }
 
   onMouseDown(e) {
@@ -356,6 +382,7 @@ export class Player {
 
   update(dt) {
     this.attackTimer = Math.max(0, this.attackTimer - dt);
+    if (this.mixer) this.mixer.update(dt);
     if (this._hasteTimer > 0) { this._hasteTimer = Math.max(0, this._hasteTimer - dt); if (this._hasteTimer === 0) this.attackSpeed = 1.0; }
     if (this._regenTimer > 0) { this._regenTimer = Math.max(0, this._regenTimer - dt); this.hp = Math.min(this.maxHp, this.hp + 10*dt); this.updateHpBar(); this.ui?.setHP(this.hp); }
     // кулдауны способностей
@@ -383,9 +410,13 @@ export class Player {
     if (input.lengthSq() > 0) {
       input.normalize();
       this.group.position.addScaledVector(input, this.speed * dt);
+      this.playAnimationFallback(['Walk','Walking','Run','Running','Idle']);
       // Поворот к мыши
       const ground = this.pickGroundPoint();
       if (ground) this.aimAt(ground);
+    }
+    else {
+      this.playAnimationFallback(['Idle','idle']);
     }
 
     // Атака выбранной цели
