@@ -25,6 +25,7 @@ export const HERO_DEFS = {
     role: "Философ, граф",
     age: 34,
     portrait: "https://i.ibb.co/bRGgWW1f/antuan.jpg",
+    usePortraitBillboard: true,
     // пока используем авокадо как заглушку модели; позже подменим на 3D-портрет
     modelUrl: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Avocado/glTF/Avocado.gltf",
     base: {

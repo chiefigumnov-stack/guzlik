@@ -105,25 +105,35 @@ export class Player {
   }
 
   loadModel(url) {
-    // Комментарий: менять модель просто — замените HERO_URL на новую ссылку GLTF/GLB
+    // Если флаг usePortraitBillboard — показываем 2D-портрет в 3D как временную заглушку герою
+    const def = HERO_DEFS[this.heroKey];
+    if (def?.usePortraitBillboard && def?.portrait) {
+      const loader = new THREE.TextureLoader();
+      loader.load(def.portrait, (tex) => {
+        const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide });
+        const aspect = tex.image ? tex.image.width / tex.image.height : 1;
+        const h = 2.2, w = h * aspect;
+        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+        mesh.position.set(0, h * 0.5, 0);
+        this.heroRoot.add(mesh);
+      });
+      return;
+    }
+
+    // Иначе грузим GLTF
     this.loader.load(url, (gltf) => {
       const model = gltf.scene || gltf.scenes?.[0];
-      if (model) {
-        model.traverse((obj) => {
-          if (obj.isMesh) {
-            obj.castShadow = true;
-            obj.receiveShadow = true;
-          }
-        });
-        // Масштабируем авокадо до разумного размера ~1.5м
-        const box = new THREE.Box3().setFromObject(model);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        const scale = 1.5 / Math.max(size.x, size.y, size.z);
-        model.scale.setScalar(scale);
-        model.position.set(0, 0, 0);
-        this.heroRoot.add(model);
-      }
+      if (!model) return;
+      model.traverse((obj) => {
+        if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; }
+      });
+      const box = new THREE.Box3().setFromObject(model);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const scale = 1.5 / Math.max(size.x, size.y, size.z);
+      model.scale.setScalar(scale);
+      model.position.set(0, 0, 0);
+      this.heroRoot.add(model);
     });
   }
 
