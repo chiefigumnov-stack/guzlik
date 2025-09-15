@@ -10,6 +10,8 @@ import { createUI } from "./ui.js";
 import { Player } from "./player.js";
 import { EnemyManager } from "./enemy.js";
 import { MobaWorld, Teams } from "./moba.js";
+import { ProjectileManager } from "./projectiles.js";
+import { AbilitySystem, createDefaultAbilities } from "./abilities.js";
 import { Network } from "./network.js";
 
 // Глобальные константы сцены
@@ -81,6 +83,9 @@ class Game {
 
     // MOBA-мир и игрок как герой Radiant
     this.world = new MobaWorld({ scene: this.scene, ui: this.ui, arenaSize: ARENA_SIZE });
+    // Снаряды + способности
+    this.projectiles = new ProjectileManager({ scene: this.scene, world: this.world });
+    this.abilitySystem = new AbilitySystem({ projectiles: this.projectiles });
     this.player = new Player({
       scene: this.scene,
       loader: this.loader,
@@ -91,6 +96,8 @@ class Game {
       ui: this.ui,
       world: this.world,
       team: Teams.Radiant,
+      abilitySystem: this.abilitySystem,
+      defaultAbilitiesFactory: createDefaultAbilities,
     });
     this.world.registerUnit(this.player);
 
@@ -157,6 +164,7 @@ class Game {
     // Обновляем игрока и MOBA-мир
     this.player.update(dt, this.scene, null);
     this.world.update(dt, this.player);
+    this.projectiles.update(dt);
 
     // Рендер сцены
     this.renderer.render(this.scene, this.camera);

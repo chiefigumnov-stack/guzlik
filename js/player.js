@@ -40,7 +40,7 @@ function createHealthBar(width = 2, height = 0.2) {
 }
 
 export class Player {
-  constructor({ scene, loader, camera, raycaster, mouse, arenaSize, ui, world, team }) {
+  constructor({ scene, loader, camera, raycaster, mouse, arenaSize, ui, world, team, abilitySystem, defaultAbilitiesFactory }) {
     this.scene = scene;
     /** @type {GLTFLoader} */ this.loader = loader || new GLTFLoader();
     this.camera = camera;
@@ -50,6 +50,8 @@ export class Player {
     this.ui = ui;
     this.world = world;
     this.team = team ?? 0;
+    this.abilitySystem = abilitySystem;
+    this.defaultAbilitiesFactory = defaultAbilitiesFactory;
 
     // Параметры игрока
     this.position = new THREE.Vector3(0, 0, 0);
@@ -212,13 +214,11 @@ export class Player {
   }
 
   initAbilities() {
-    // Простейшие заглушки способностей
-    this.abilities = {
-      Q: { key: 'Q', name: 'Dash', cooldown: 6, desc: 'Рывок вперёд на короткую дистанцию', timer: 0 },
-      W: { key: 'W', name: 'Shield', cooldown: 10, desc: 'Щит на 2 сек (поглощает урон)', timer: 0 },
-      E: { key: 'E', name: 'Slow', cooldown: 8, desc: 'Замедляет цель', timer: 0 },
-      R: { key: 'R', name: 'Overdrive', cooldown: 30, desc: 'Временное усиление урона и скорости', timer: 0 },
-    };
+    // Настоящий набор способностей через фабрику
+    this.abilities = (this.defaultAbilitiesFactory ? this.defaultAbilitiesFactory() : {});
+    // Базовая мана
+    this.maxMana = 300; this.mana = 300;
+    this.ui?.setMana?.(this.mana, this.maxMana);
     this.ui?.setAbilities?.(this.abilities);
     window.addEventListener('keydown', (e) => this.onKeyAbility(e));
     // Клики по кнопкам
@@ -235,23 +235,9 @@ export class Player {
     const ab = this.abilities?.[k];
     if (!ab) return;
     if (ab.timer > 0) return;
-    // Активируем
-    if (k === 'Q') {
-      const dir = new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(0, this.group.rotation.y, 0));
-      this.group.position.addScaledVector(dir, 4);
-    } else if (k === 'W') {
-      this.hp = Math.min(this.maxHp, this.hp + 80);
-      this.updateHpBar();
-      this.ui?.setHP(this.hp);
-    } else if (k === 'E') {
-      // В прототипе: сообщение
-      this.ui?.announce?.('E: Slow — заглушка');
-    } else if (k === 'R') {
-      this.ui?.announce?.('R: Overdrive — заглушка');
-      this.attackDamage *= 1.5;
-      setTimeout(() => { this.attackDamage /= 1.5; }, 4000);
-    }
-    ab.timer = ab.cooldown;
+    // Каст через AbilitySystem
+    const casted = this.abilitySystem?.cast(this, k, this.abilities, this.world);
+    if (casted) return;
   }
 
   updateHpBar() {

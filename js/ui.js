@@ -88,6 +88,12 @@ export function createUI() {
 
   // Возвращаем API для обновления HUD
   const hpEl = topLeft.querySelector("#ui-hp");
+  // Мана — добавим отдельную строку ниже HP
+  const manaRow = document.createElement('div');
+  manaRow.innerHTML = 'Mana: <span id="ui-mana" class="value">300</span>/<span id="ui-mana-max" class="value">300</span>';
+  topLeft.appendChild(manaRow);
+  const manaEl = manaRow.querySelector('#ui-mana');
+  const manaMaxEl = manaRow.querySelector('#ui-mana-max');
   const baseREl = topLeft.querySelector("#ui-base-r");
   const baseDEl = topLeft.querySelector("#ui-base-d");
   const goldEl = topLeft.querySelector("#ui-gold");
@@ -122,6 +128,10 @@ export function createUI() {
     setBases(r, d) {
       baseREl.textContent = String(Math.max(0, Math.floor(r)));
       baseDEl.textContent = String(Math.max(0, Math.floor(d)));
+    },
+    setMana(v, max) {
+      manaEl.textContent = String(Math.max(0, Math.floor(v)));
+      manaMaxEl.textContent = String(Math.max(0, Math.floor(max)));
     },
     setGold(v) {
       goldEl.textContent = String(Math.max(0, Math.floor(v)));
