@@ -301,6 +301,8 @@ class Creep {
     this.healthBar.position.set(0, 1.6, 0);
     this.group.add(this.healthBar);
     this.scene.add(this.group);
+    // Вектор позиции для систем урона/поиска
+    this.position = this.group.position;
   }
 
   loadModel() {
@@ -415,6 +417,9 @@ class Creep {
         this.moveTowards(basePos, dt);
       }
     }
+
+    // Синхронизируем позицию объекта для системы целей/урона
+    this.position.copy(this.group.position);
   }
 
   dispose() {

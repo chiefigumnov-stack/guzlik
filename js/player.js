@@ -324,8 +324,8 @@ export class Player {
       let didHit = false;
       for (const u of this.world.units) {
         if (u.team === this.team) continue;
-        if (!u.position) continue;
-        const toU = new THREE.Vector3().subVectors(u.position, this.group.position); toU.y = 0;
+        const upos = u.position || u.group?.position; if (!upos) continue;
+        const toU = new THREE.Vector3().subVectors(upos, this.group.position); toU.y = 0;
         const dist = toU.length();
         if (dist <= range) {
           toU.normalize();
