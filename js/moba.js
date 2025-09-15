@@ -58,6 +58,10 @@ export class MobaWorld {
 
     // Обновляем UI баз
     this.ui?.setBases?.(this.baseHp[Teams.Radiant], this.baseHp[Teams.Dire]);
+
+    // Награды
+    this.creepGold = 35;
+    this.creepXP = 48;
   }
 
   registerUnit(unit) {
@@ -162,6 +166,15 @@ export class MobaWorld {
     if (this.enemyHero) this.updateEnemyHero(dt);
   }
 
+  onCreepKilled(attacker, creep) {
+    if (!attacker) return;
+    if (attacker.unitType === 'hero') {
+      attacker.grantGold?.(this.creepGold);
+      attacker.grantXP?.(this.creepXP);
+      this.ui?.announce?.(`+${this.creepGold} золота, +${this.creepXP} XP`);
+    }
+  }
+
   ensureEnemyHero() {
     if (this.enemyHero) return;
     // заспаунить примитивного героя Dire в базе
@@ -235,9 +248,12 @@ class Creep {
 
   isDead() { return this.hp <= 0; }
 
-  applyDamage(v) {
+  applyDamage(v, attacker) {
     this.hp = Math.max(0, this.hp - v);
     this.updateHpBar();
+    if (this.hp <= 0) {
+      this.world?.onCreepKilled?.(attacker, this);
+    }
   }
 
   acquireTarget() {

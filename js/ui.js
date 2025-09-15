@@ -5,6 +5,33 @@ export function createUI() {
   const root = document.getElementById("hud-root");
   root.innerHTML = "";
 
+  // Оверлей выбора героя
+  const heroSelect = document.createElement("div");
+  Object.assign(heroSelect.style, {
+    position: "absolute",
+    inset: "0",
+    display: "none",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "rgba(0,0,0,0.6)",
+    pointerEvents: "auto",
+  });
+  root.appendChild(heroSelect);
+
+  const heroGrid = document.createElement("div");
+  Object.assign(heroGrid.style, {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: "12px",
+    width: "min(900px, 90vw)",
+  });
+  heroSelect.appendChild(heroGrid);
+
+  const heroTitle = document.createElement("div");
+  heroTitle.textContent = "Выберите героя";
+  Object.assign(heroTitle.style, { marginBottom: "12px", fontSize: "18px", fontWeight: "700", textAlign: "center" });
+  heroSelect.insertBefore(heroTitle, heroGrid);
+
   // Левый верхний угол
   const topLeft = document.createElement("div");
   topLeft.id = "top-left";
@@ -133,6 +160,29 @@ export function createUI() {
         const v = remainsByKey[k];
         if (v && v > 0) cds[k].textContent = `(CD ${v.toFixed(1)}s)`; else cds[k].textContent = "";
       }
+    },
+    showHeroSelect(heroes, onSelect) {
+      heroGrid.innerHTML = "";
+      heroes.forEach((h) => {
+        const card = document.createElement("button");
+        Object.assign(card.style, {
+          display: "flex", flexDirection: "column", gap: "6px",
+          background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.2)",
+          borderRadius: "10px", padding: "10px", textAlign: "left", cursor: "pointer",
+          color: "#e6edf3"
+        });
+        card.innerHTML = `
+          <img src="${h.portrait || ''}" style="width:100%;height:140px;object-fit:cover;border-radius:8px"/>
+          <div style="font-weight:700">${h.name}</div>
+          <div style="opacity:0.8;font-size:12px;">${h.role || ''}</div>
+        `;
+        card.addEventListener('click', () => { onSelect?.(h.key); this.hideHeroSelect(); });
+        heroGrid.appendChild(card);
+      });
+      heroSelect.style.display = "flex";
+    },
+    hideHeroSelect() {
+      heroSelect.style.display = "none";
     }
   };
 }
