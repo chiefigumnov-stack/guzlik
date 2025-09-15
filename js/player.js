@@ -76,6 +76,10 @@ export class Player {
     this.group.add(this.healthBar);
     this.updateHpBar();
 
+    // Инициализируем HUD значениями HP и Score
+    this.ui?.setHP(this.hp);
+    this.ui?.setScore(this.score);
+
     // Управление
     this.keys = { w: false, a: false, s: false, d: false };
     window.addEventListener("keydown", (e) => this.onKey(e, true));

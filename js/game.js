@@ -44,8 +44,10 @@ class Game {
     this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 500);
 
     // Располагаем камеру выше сцены и смотрим на центр арены
+    // Псевдо-изометрия: угол возвышения 60° над плоскостью (Y / горизонтальное расстояние = tan(60°))
+    const desiredElevationDeg = 60;
     const cameraHeight = 45; // высота камеры над ареной
-    const cameraDistance = 45; // сдвиг по Z для перспективы
+    const cameraDistance = cameraHeight / Math.tan(THREE.MathUtils.degToRad(desiredElevationDeg));
     this.camera.position.set(0, cameraHeight, cameraDistance);
     this.camera.lookAt(new THREE.Vector3(0, 0, 0));
 
