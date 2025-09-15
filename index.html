@@ -69,6 +69,16 @@
     <!-- HUD контейнер (создаётся и наполняется в ui.js) -->
     <div id="hud-root"></div>
 
+    <!-- Import map для корректного разрешения модулей three/examples -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.1/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.1/examples/jsm/"
+        }
+      }
+    </script>
+
     <!-- Основной модуль игры -->
     <script type="module" src="./js/game.js"></script>
   </body>
