@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Adversator — Clone (demo)</title>
+<style>
+  html,body { height:100%; margin:0; background:#0b0d12; color:#ddd; font-family:Inter,system-ui,Segoe UI,Roboto,Arial; }
+  #game { display:block; margin:0 auto; background:#0a0b0f; box-shadow:0 8px 30px rgba(0,0,0,0.6); border-radius:8px; }
+  .hud {
+    position:fixed; left:16px; top:16px; z-index:10;
+    background:rgba(0,0,0,0.45); padding:10px 14px; border-radius:8px; backdrop-filter:blur(4px);
+    box-shadow:0 4px 14px rgba(0,0,0,0.6);
+  }
+  .controls { position:fixed; right:16px; top:16px; color:#bfc7ff; font-size:13px; background:rgba(0,0,0,0.35);
+             padding:8px 12px; border-radius:8px; }
+  .center {
+    position:fixed; left:50%; transform:translateX(-50%); bottom:18px; color:#9fbf9f; background:rgba(0,0,0,0.32);
+    padding:8px 12px; border-radius:8px; font-size:13px;
+  }
+</style>
+</head>
+<body>
+<canvas id="game" width="1024" height="640"></canvas>
+
+<div class="hud" id="hud">
+  HP: <span id="hp">100</span> &nbsp;|&nbsp; Score: <span id="score">0</span>
+</div>
+<div class="controls">
+  WASD — движение · Мышь — прицел · ЛКМ — выстрел · R — перезарядка
+</div>
+<div class="center" id="msg">Кликни по холсту чтобы захватить курсор (pointer lock) и начать</div>
+
+<script>
+// ====== Настройки ======
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d', { alpha: false });
+const W = canvas.width, H = canvas.height;
+let pointerLocked = false;
+
+// Игрок
+const player = {
+  x: W/2, y: H/2, r: 16,
+  speed: 240, // px/s
+  hp: 100, maxHp: 100,
+  aimX: W/2, aimY: H/2,
+  fireCooldown: 0, fireRate: 0.12, // seconds between shots
+  bullets: [],
+  mag: 12, maxMag: 12, reloading: false, reloadTime: 1.6, reloadTimer: 0
+};
+
+// Враги
+let enemies = [];
+const enemyTypes = [
+  { r:14, speed: 60, hp: 25, color:'#c75a5a', score:10 },
+  { r:20, speed: 45, hp: 45, color:'#c7a25a', score:20 }
+];
+
+// Пули
+const bullets = [];
+
+// Таймеры
+let last = performance.now()/1000;
+let accumulator = 0;
+let score = 0;
+let spawnTimer = 0, spawnInterval = 1.6;
+
+// Ввод
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key === 'r' || e.key === 'R') tryReload();
+});
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+// Мышь
+canvas.addEventListener('mousemove', e => {
+  if (pointerLocked) {
+    player.aimX += e.movementX;
+    player.aimY += e.movementY;
+  } else {
+    const rect = canvas.getBoundingClientRect();
+    player.aimX = (e.clientX - rect.left) * (canvas.width/rect.width);
+    player.aimY = (e.clientY - rect.top) * (canvas.height/rect.height);
+  }
+});
+let firing = false;
+canvas.addEventListener('mousedown', e => {
+  if (e.button === 0) firing = true;
+});
+window.addEventListener('mouseup', e => { if (e.button === 0) firing = false; });
+
+// Pointer lock for immersive control
+canvas.addEventListener('click', () => {
+  canvas.requestPointerLock?.();
+  document.getElementById('msg').style.display = 'none';
+});
+document.addEventListener('pointerlockchange', () => {
+  pointerLocked = document.pointerLockElement === canvas;
+});
+
+// UI
+const hpEl = document.getElementById('hp');
+const scoreEl = document.getElementById('score');
+
+// ====== Game functions ======
+function spawnEnemy() {
+  const t = enemyTypes[Math.random() < 0.7 ? 0 : 1];
+  // spawn at edges
+  const side = Math.floor(Math.random()*4);
+  let x, y;
+  if (side===0) { x = -30; y = Math.random()*H; }
+  else if (side===1) { x = W+30; y = Math.random()*H; }
+  else if (side===2) { x = Math.random()*W; y = -30; }
+  else { x = Math.random()*W; y = H+30; }
+  enemies.push({
+    x, y, r: t.r, speed: t.speed, hp: t.hp, color: t.color, score: t.score
+  });
+}
+
+function tryShoot() {
+  if (player.reloading) return;
+  if (player.fireCooldown > 0) return;
+  if (player.mag <= 0) { tryReload(); return; }
+  // spawn bullet
+  const dx = player.aimX - player.x;
+  const dy = player.aimY - player.y;
+  const len = Math.hypot(dx,dy) || 1;
+  const nx = dx/len, ny = dy/len;
+  bullets.push({
+    x: player.x + nx*(player.r+8),
+    y: player.y + ny*(player.r+8),
+    vx: nx*800, vy: ny*800, r:4, life:1.6
+  });
+  player.mag -= 1;
+  player.fireCooldown = player.fireRate;
+}
+
+function tryReload() {
+  if (player.reloading || player.mag === player.maxMag) return;
+  player.reloading = true;
+  player.reloadTimer = player.reloadTime;
+}
+
+function update(dt) {
+  // movement
+  let mvx = 0, mvy = 0;
+  if (keys['w']) mvy -= 1;
+  if (keys['s']) mvy += 1;
+  if (keys['a']) mvx -= 1;
+  if (keys['d']) mvx += 1;
+  const mvlen = Math.hypot(mvx,mvy) || 1;
+  player.x += (mvx/mvlen) * player.speed * dt;
+  player.y += (mvy/mvlen) * player.speed * dt;
+  // clamp to world
+  player.x = Math.max(10, Math.min(W-10, player.x));
+  player.y = Math.max(10, Math.min(H-10, player.y));
+
+  // firing
+  if (firing) tryShoot();
+  if (player.fireCooldown > 0) player.fireCooldown = Math.max(0, player.fireCooldown - dt);
+
+  // reloading
+  if (player.reloading) {
+    player.reloadTimer -= dt;
+    if (player.reloadTimer <= 0) {
+      player.reloading = false;
+      player.mag = player.maxMag;
+    }
+  }
+
+  // bullets
+  for (let i = bullets.length-1; i>=0; i--) {
+    const b = bullets[i];
+    b.x += b.vx*dt;
+    b.y += b.vy*dt;
+    b.life -= dt;
+    // remove if outside or expired
+    if (b.life <= 0 || b.x < -50 || b.x > W+50 || b.y < -50 || b.y > H+50) {
+      bullets.splice(i,1);
+      continue;
+    }
+    // collide with enemies
+    for (let j = enemies.length-1; j>=0; j--) {
+      const e = enemies[j];
+      const dx = b.x - e.x, dy = b.y - e.y;
+      const d2 = dx*dx + dy*dy;
+      if (d2 < (b.r+e.r)*(b.r+e.r)) {
+        e.hp -= 18; // damage
+        bullets.splice(i,1);
+        if (e.hp <= 0) {
+          score += e.score;
+          scoreEl.textContent = score;
+          enemies.splice(j,1);
+        }
+        break;
+      }
+    }
+  }
+
+  // enemies AI: move toward player
+  for (let i = enemies.length-1; i>=0; i--) {
+    const e = enemies[i];
+    const dx = player.x - e.x, dy = player.y - e.y;
+    const len = Math.hypot(dx,dy) || 1;
+    e.x += (dx/len)*e.speed*dt;
+    e.y += (dy/len)*e.speed*dt;
+    // collide with player
+    if ((e.x-player.x)**2 + (e.y-player.y)**2 < (e.r+player.r)**2) {
+      // damage player and recoil enemy
+      player.hp -= 12 * dt; // continuous damage on contact
+      e.x -= (dx/len)*e.speed*dt*0.8;
+      e.y -= (dy/len)*e.speed*dt*0.8;
+      if (player.hp <= 0) {
+        player.hp = 0;
+      }
+    }
+  }
+
+  // spawn
+  spawnTimer -= dt;
+  if (spawnTimer <= 0) {
+    spawnTimer = spawnInterval;
+    spawnEnemy();
+    // make it slightly harder over time
+    if (spawnInterval > 0.5) spawnInterval *= 0.995;
+  }
+
+  // update UI
+  hpEl.textContent = Math.max(0, Math.round(player.hp));
+  // simple game over reset
+  if (player.hp <= 0) {
+    // show message and reset after short pause
+    showGameOver();
+  }
+}
+
+let gameOverTimer = 0;
+function showGameOver() {
+  if (gameOverTimer === 0) {
+    document.getElementById('msg').style.display = 'block';
+    document.getElementById('msg').textContent = 'Game Over — клик для перезапуска. Очки: ' + score;
+    gameOverTimer = 1.0;
+  }
+  gameOverTimer += 0.016;
+  if (gameOverTimer > 0.5) resetGame();
+}
+
+function resetGame() {
+  player.x = W/2; player.y = H/2; player.hp = player.maxHp; player.mag = player.maxMag;
+  bullets.length = 0; enemies.length = 0;
+  score = 0; scoreEl.textContent = '0';
+  spawnInterval = 1.6; spawnTimer = 0.6;
+  gameOverTimer = 0;
+  document.getElementById('msg').style.display = 'none';
+}
+
+// ====== Render ======
+function drawRounded(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function render() {
+  // background
+  ctx.fillStyle = '#081021';
+  ctx.fillRect(0,0,W,H);
+
+  // subtle grid / floor
+  ctx.save();
+  ctx.globalAlpha = 0.05;
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#ffffff';
+  for (let gx = 0; gx < W; gx += 64) {
+    ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,H); ctx.stroke();
+  }
+  for (let gy = 0; gy < H; gy += 64) {
+    ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(W,gy); ctx.stroke();
+  }
+  ctx.restore();
+
+  // enemies
+  enemies.forEach(e => {
+    ctx.beginPath();
+    ctx.fillStyle = e.color;
+    ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
+    ctx.fill();
+    // hp bar
+    const barW = e.r*2;
+    ctx.fillStyle = '#222';
+    ctx.fillRect(e.x - e.r, e.y - e.r - 10, barW, 4);
+    ctx.fillStyle = '#6ee';
+    ctx.fillRect(e.x - e.r, e.y - e.r -10, (e.hp/(e.r===14?25:45))*barW, 4);
+  });
+
+  // bullets
+  bullets.forEach(b => {
+    ctx.beginPath();
+    ctx.fillStyle = '#f5ea6b';
+    ctx.arc(b.x, b.y, b.r,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  // player
+  // body
+  ctx.beginPath();
+  ctx.fillStyle = '#7fb3ff';
+  ctx.arc(player.x, player.y, player.r+2, 0, Math.PI*2);
+  ctx.fill();
+  // direction cone
+  const dx = player.aimX - player.x, dy = player.aimY - player.y;
+  const ang = Math.atan2(dy,dx);
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.rotate(ang);
+  // gun
+  ctx.fillStyle = '#d9e5ff';
+  ctx.fillRect(8, -6, 22, 12);
+  ctx.restore();
+
+  // crosshair
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.lineWidth = 1;
+  ctx.moveTo(player.aimX-10, player.aimY);
+  ctx.lineTo(player.aimX+10, player.aimY);
+  ctx.moveTo(player.aimX, player.aimY-10);
+  ctx.lineTo(player.aimX, player.aimY+10);
+  ctx.stroke();
+
+  // bottom UI: ammo bar
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(12, H-44, 220, 34);
+  ctx.fillStyle = '#fff';
+  ctx.font = '12px Inter, Arial';
+  ctx.fillText(`Ammo: ${player.mag}/${player.maxMag}` + (player.reloading ? ' (reloading...)' : ''), 22, H-22);
+
+  // health bar
+  const hpW = 220;
+  drawRounded(250, H-44, hpW, 34, 6);
+  ctx.fillStyle = '#222';
+  ctx.fill();
+  ctx.fillStyle = '#ff6b6b';
+  ctx.fillRect(250, H-44, hpW * (player.hp/player.maxHp), 34);
+
+  // score small
+  ctx.fillStyle = '#cfeaff';
+  ctx.font = '14px Inter, Arial';
+  ctx.fillText('Score: ' + score, W-120, 26);
+}
+
+// ====== Main loop ======
+function frame() {
+  const now = performance.now()/1000;
+  let dt = now - last;
+  last = now;
+  // clamp dt to avoid big jumps
+  if (dt > 0.05) dt = 0.05;
+
+  update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+
+// initial spawn
+for (let i=0;i<3;i++) spawnEnemy();
+frame();
+
+</script>
+</body>
+</html>
