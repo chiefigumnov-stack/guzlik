@@ -4,6 +4,7 @@
 
 import * as THREE from "https://unpkg.com/three@0.160.1/build/three.module.js";
 import { GLTFLoader } from "https://unpkg.com/three@0.160.1/examples/jsm/loaders/GLTFLoader.js";
+import { HERO_DEFS } from "./heroData.js";
 
 const HERO_URL = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Avocado/glTF/Avocado.gltf";
 
@@ -53,9 +54,15 @@ export class Player {
     // Параметры игрока
     this.position = new THREE.Vector3(0, 0, 0);
     this.velocity = new THREE.Vector3();
-    this.speed = 10;
-    this.hp = 100;
-    this.maxHp = 100;
+    // Герой и статы
+    this.heroKey = "avocado";
+    const def = HERO_DEFS[this.heroKey];
+    this.speed = def.base.moveSpeed;
+    this.maxHp = def.base.maxHp;
+    this.hp = this.maxHp;
+    this.attackDamage = def.base.attackDamage;
+    this.range = def.base.attackRange;
+    this.attackCooldown = def.base.attackCooldown;
     this.unitType = "hero";
 
     // Слои
@@ -88,9 +95,12 @@ export class Player {
     window.addEventListener("mousedown", (e) => this.onMouseDown(e));
 
     // Бой
-    this.range = 3.5;
-    this.attackCooldown = 0.9;
     this.attackTimer = 0;
+
+    // Прогресс героя
+    this.level = 1;
+    this.xp = 0;
+    this.gold = 0;
   }
 
   loadModel(url) {
@@ -211,7 +221,7 @@ export class Player {
       if (this.attackTimer <= 0) {
         this.attackTimer = this.attackCooldown;
         this.aimAt(this.attackTarget.position);
-        this.attackTarget.applyDamage?.(28, this);
+        this.attackTarget.applyDamage?.(this.attackDamage, this);
       }
     } else {
       // Идём к цели

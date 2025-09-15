@@ -22,19 +22,35 @@ export class MobaWorld {
       [Teams.Dire]: new THREE.Vector3(22, 0, 22),
     };
 
-    // Вейпоинты по мидлейну
-    this.midWaypoints = [
-      new THREE.Vector3(-22, 0, -22),
-      new THREE.Vector3(-10, 0, -10),
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(10, 0, 10),
-      new THREE.Vector3(22, 0, 22),
-    ];
+    // Три линии: top, mid, bot (упрощённые точки)
+    this.lanes = {
+      mid: [
+        new THREE.Vector3(-22, 0, -22),
+        new THREE.Vector3(-10, 0, -10),
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(10, 0, 10),
+        new THREE.Vector3(22, 0, 22),
+      ],
+      top: [
+        new THREE.Vector3(-22, 0, 22),
+        new THREE.Vector3(-10, 0, 14),
+        new THREE.Vector3(0, 0, 10),
+        new THREE.Vector3(10, 0, 6),
+        new THREE.Vector3(22, 0, 2),
+      ],
+      bot: [
+        new THREE.Vector3(22, 0, -22),
+        new THREE.Vector3(10, 0, -14),
+        new THREE.Vector3(0, 0, -10),
+        new THREE.Vector3(-10, 0, -6),
+        new THREE.Vector3(-22, 0, -2),
+      ],
+    };
 
     // Волногенератор крипов
     this.waveTimer = 0;
     this.waveInterval = 15; // сек между волнами
-    this.creepsPerWave = 5;
+    this.creepsPerWave = 4;
 
     // Создаём башни
     this.createTowers();
@@ -73,25 +89,36 @@ export class MobaWorld {
   }
 
   createTowers() {
-    // По одному тору у каждой команды, ближе к базе на мидлейне
-    const rPos = new THREE.Vector3(-12, 0, -12);
-    const dPos = new THREE.Vector3(12, 0, 12);
-    const rTower = new Tower({ scene: this.scene, world: this, team: Teams.Radiant, position: rPos });
-    const dTower = new Tower({ scene: this.scene, world: this, team: Teams.Dire, position: dPos });
-    this.towers.push(rTower, dTower);
-    this.registerUnit(rTower);
-    this.registerUnit(dTower);
+    const positions = {
+      mid: { r: new THREE.Vector3(-12, 0, -12), d: new THREE.Vector3(12, 0, 12) },
+      top: { r: new THREE.Vector3(-16, 0, 10), d: new THREE.Vector3(16, 0, 4) },
+      bot: { r: new THREE.Vector3(-4, 0, -16), d: new THREE.Vector3(4, 0, -10) },
+    };
+    for (const lane of Object.keys(positions)) {
+      const rPos = positions[lane].r;
+      const dPos = positions[lane].d;
+      const rTower = new Tower({ scene: this.scene, world: this, team: Teams.Radiant, position: rPos, lane });
+      const dTower = new Tower({ scene: this.scene, world: this, team: Teams.Dire, position: dPos, lane });
+      this.towers.push(rTower, dTower);
+      this.registerUnit(rTower);
+      this.registerUnit(dTower);
+    }
   }
 
   spawnWave(team) {
     const start = this.basePositions[team];
-    const wp = team === Teams.Radiant ? this.midWaypoints.slice(1) : this.midWaypoints.slice(0, -1).reverse();
-    for (let i = 0; i < this.creepsPerWave; i++) {
-      const offset = (i - (this.creepsPerWave - 1) / 2) * 0.8;
-      const spawn = new THREE.Vector3(start.x + offset, 0, start.z + offset);
-      const creep = new Creep({ scene: this.scene, world: this, team, position: spawn, waypoints: wp });
-      this.creeps.push(creep);
-      this.registerUnit(creep);
+    const lanesOrder = ["mid", "top", "bot"];
+    for (const lane of lanesOrder) {
+      const laneWps = this.lanes[lane];
+      const wp = team === Teams.Radiant ? laneWps.slice(1) : laneWps.slice(0, -1).reverse();
+      for (let i = 0; i < this.creepsPerWave; i++) {
+        const offset = (i - (this.creepsPerWave - 1) / 2) * 0.8;
+        const spawn = new THREE.Vector3(start.x + offset, 0, start.z + offset);
+        const creep = new Creep({ scene: this.scene, world: this, team, position: spawn, waypoints: wp });
+        creep.unitType = "creep";
+        this.creeps.push(creep);
+        this.registerUnit(creep);
+      }
     }
   }
 
