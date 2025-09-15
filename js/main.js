@@ -12,8 +12,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   const ui = createUI();
   ui.showHeroSelect(toHeroList(), async (heroKey) => {
     window.__chosenHeroKey = heroKey;
-    // Загружаем игру динамически после выбора героя
-    await import("./game.js");
+    const gameMod = await import("./game.js");
+    gameMod.startGame();
   });
 });
 

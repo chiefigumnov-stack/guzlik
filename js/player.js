@@ -94,11 +94,14 @@ export class Player {
     this.ui?.setLevelXP?.(this.level, this.xp, this.xpToNextLevel());
     this.initAbilities();
 
-    // Управление кликами
+    // Управление: клики + WASD
     this.moveTarget = null; // точка назначения
     this.attackTarget = null; // выбранная цель
     window.addEventListener("contextmenu", (e) => e.preventDefault());
     window.addEventListener("mousedown", (e) => this.onMouseDown(e));
+    this.keys = { w:false,a:false,s:false,d:false };
+    window.addEventListener('keydown', (e)=>{ const k=e.key.toLowerCase(); if(k==='w'||k==='ц') this.keys.w=true; if(k==='a'||k==='ф') this.keys.a=true; if(k==='s'||k==='ы') this.keys.s=true; if(k==='d'||k==='в') this.keys.d=true; });
+    window.addEventListener('keyup', (e)=>{ const k=e.key.toLowerCase(); if(k==='w'||k==='ц') this.keys.w=false; if(k==='a'||k==='ф') this.keys.a=false; if(k==='s'||k==='ы') this.keys.s=false; if(k==='d'||k==='в') this.keys.d=false; });
 
     // Бой
     this.attackTimer = 0;
@@ -366,6 +369,16 @@ export class Player {
       const dist = this.group.position.distanceTo(this.moveTarget);
       if (dist < 0.2) this.moveTarget = null;
       else this.moveTowards(this.moveTarget, dt);
+    }
+
+    // WASD движение
+    const input = new THREE.Vector3((this.keys?.d?1:0)-(this.keys?.a?1:0), 0, (this.keys?.s?1:0)-(this.keys?.w?1:0));
+    if (input.lengthSq() > 0) {
+      input.normalize();
+      this.group.position.addScaledVector(input, this.speed * dt);
+      // Поворот к мыши
+      const ground = this.pickGroundPoint();
+      if (ground) this.aimAt(ground);
     }
 
     // Атака выбранной цели

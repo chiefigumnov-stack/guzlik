@@ -29,7 +29,7 @@ function loadTexture(url) {
 }
 
 // Основной класс Game для явной структуры
-class Game {
+export class Game {
   constructor() {
     /** @type {THREE.Scene} */
     this.scene = new THREE.Scene();
@@ -176,12 +176,8 @@ class Game {
   }
 }
 
-// Старт игры после загрузки документа
-window.addEventListener("DOMContentLoaded", () => {
-  // Комментарий: структура модулей позволяет легко заменить модели или расширить логику
-  // Например, достаточно поменять URL в player.js / enemy.js на новые GLTF.
-  // В будущем можно подключить анимации, skinned mesh, сетевой синхронизатор и т.д.
+export function startGame() {
   const game = new Game();
-  window.__game = game; // для отладки в консоли
-});
+  window.__game = game;
+}
 
