@@ -178,32 +178,36 @@ export class Player {
   }
 
   onMouseDown(e) {
-    if (e.button !== 2) return; // ПКМ
     // Луч в мир
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    // Сначала ищем юнитов под курсором (простая проверка через пересечение с их группой)
-    let clickedUnit = null;
-    for (const u of this.world?.units || []) {
-      if (u === this) continue;
-      if (!u.group) continue;
-      const box = new THREE.Box3().setFromObject(u.group);
-      // Проверяем пересечение луча с AABB юнита (глобальные координаты)
-      const intersect = this.raycaster.ray.intersectsBox(box);
-      if (intersect) { clickedUnit = u; break; }
-    }
+    // Поиск юнита под курсором
+    const pickUnit = () => {
+      let picked = null; let pickedDist = Infinity;
+      for (const u of this.world?.units || []) {
+        if (u === this) continue; if (!u.group) continue;
+        const box = new THREE.Box3().setFromObject(u.group);
+        if (this.raycaster.ray.intersectsBox(box)) {
+          const upos = u.position || u.group.position;
+          const d = upos.distanceTo(this.group.position);
+          if (d < pickedDist) { picked = u; pickedDist = d; }
+        }
+      }
+      return picked;
+    };
 
-    if (clickedUnit && clickedUnit.team !== this.team) {
-      // Атаковать цель
-      this.attackTarget = clickedUnit;
-      this.moveTarget = null;
+    if (e.button === 0) { // ЛКМ — атака/движение
+      const unit = pickUnit();
+      if (unit && unit.team !== this.team) {
+        this.attackTarget = unit; this.moveTarget = null; return;
+      }
+      const p = this.pickGroundPoint();
+      if (p) { this.moveTarget = p; this.attackTarget = null; }
       return;
     }
-
-    // Иначе — двигаемся к точке на земле
-    const groundIntersect = this.pickGroundPoint();
-    if (groundIntersect) {
-      this.moveTarget = groundIntersect;
-      this.attackTarget = null;
+    if (e.button === 2) { // ПКМ — перемещение
+      const p = this.pickGroundPoint();
+      if (p) { this.moveTarget = p; }
+      return;
     }
   }
 
