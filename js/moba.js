@@ -261,7 +261,7 @@ export class MobaWorld {
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2;
       const pos = caster.group.position.clone().add(new THREE.Vector3(Math.cos(angle) * 2, 0, Math.sin(angle) * 2));
-      const d = new Creep({ scene: this.scene, world: this, team: caster.team, position: pos, waypoints: [] });
+      const d = new Creep({ scene: this.scene, world: this, loader: this.loader, team: caster.team, position: pos, waypoints: [] });
       d.unitType = 'creep';
       d.speed = 4.5; d.damage = 22; d.hp = d.maxHp = 240; d.aggroRadius = 8.0; d.range = 2.0; d.attackCooldown = 1.0;
       d._lifeTimer = life;
