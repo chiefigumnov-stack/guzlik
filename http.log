@@ -258,3 +258,21 @@ nohup: ignoring input
 127.0.0.1 - - [15/Sep/2025 10:07:21] "GET /js/projectiles.js HTTP/1.1" 200 -
 127.0.0.1 - - [15/Sep/2025 10:07:21] "GET /js/abilities.js HTTP/1.1" 200 -
 127.0.0.1 - - [15/Sep/2025 10:07:21] "GET /js/moba_neutral.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:44] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:44] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:45] "GET /js/heroData.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:45] "GET /js/ui.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:47] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:47] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:47] "GET /js/ui.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:47] "GET /js/heroData.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:48] code 404, message File not found
+127.0.0.1 - - [15/Sep/2025 10:18:48] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [15/Sep/2025 10:18:49] "GET /js/game.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:49] "GET /js/enemy.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:49] "GET /js/player.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:49] "GET /js/moba.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:49] "GET /js/network.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:49] "GET /js/projectiles.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:50] "GET /js/abilities.js HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2025 10:18:50] "GET /js/moba_neutral.js HTTP/1.1" 200 -
