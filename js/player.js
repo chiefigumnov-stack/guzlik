@@ -40,7 +40,7 @@ function createHealthBar(width = 2, height = 0.2) {
 }
 
 export class Player {
-  constructor({ scene, loader, camera, raycaster, mouse, arenaSize, ui, world, team, abilitySystem, defaultAbilitiesFactory }) {
+  constructor({ scene, loader, camera, raycaster, mouse, arenaSize, ui, world, team, abilitySystem, defaultAbilitiesFactory, heroKey }) {
     this.scene = scene;
     /** @type {GLTFLoader} */ this.loader = loader || new GLTFLoader();
     this.camera = camera;
@@ -57,7 +57,7 @@ export class Player {
     this.position = new THREE.Vector3(0, 0, 0);
     this.velocity = new THREE.Vector3();
     // Герой и статы
-    this.heroKey = "CM-01"; // по умолчанию — ваш герой
+    this.heroKey = heroKey || "CM-01"; // по умолчанию — ваш герой
     const def = HERO_DEFS[this.heroKey];
     this.speed = def.base.moveSpeed;
     this.maxHp = def.base.maxHp;

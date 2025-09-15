@@ -86,6 +86,8 @@ class Game {
     // Снаряды + способности
     this.projectiles = new ProjectileManager({ scene: this.scene, world: this.world });
     this.abilitySystem = new AbilitySystem({ projectiles: this.projectiles });
+    // выбрать героя из глобального выбора (по умолчанию CM-01)
+    const chosen = window.__chosenHeroKey || "CM-01";
     this.player = new Player({
       scene: this.scene,
       loader: this.loader,
@@ -98,6 +100,7 @@ class Game {
       team: Teams.Radiant,
       abilitySystem: this.abilitySystem,
       defaultAbilitiesFactory: createDefaultAbilities,
+      heroKey: chosen,
     });
     this.world.registerUnit(this.player);
 
