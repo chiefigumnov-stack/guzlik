@@ -88,6 +88,9 @@ export class Player {
     // Инициализируем HUD значениями HP
     this.ui?.setHP(this.hp);
     this.ui?.setHeroCard?.({ name: def.name, role: def.role, portrait: def.portrait });
+    this.ui?.setGold?.(this.gold);
+    this.ui?.setLevelXP?.(this.level, this.xp, this.xpToNextLevel());
+    this.initAbilities();
 
     // Управление кликами
     this.moveTarget = null; // точка назначения
@@ -180,6 +183,72 @@ export class Player {
     this.ui?.setHP(this.hp);
   }
 
+  xpToNextLevel() {
+    return 100 + (this.level - 1) * 50;
+  }
+
+  grantXP(amount) {
+    this.xp += amount;
+    const next = this.xpToNextLevel();
+    while (this.xp >= next) {
+      this.level++;
+      // Рост статов по определению героя
+      const def = HERO_DEFS[this.heroKey];
+      if (def?.growth) {
+        this.maxHp += def.growth.maxHp;
+        this.attackDamage += def.growth.attackDamage;
+        this.attackCooldown = Math.max(0.2, this.attackCooldown + (def.growth.attackCooldown || 0));
+        this.speed += def.growth.moveSpeed;
+        this.hp = this.maxHp;
+        this.updateHpBar();
+        this.ui?.setHP(this.hp);
+      }
+      // Обновить next после апа
+    }
+    this.ui?.setLevelXP?.(this.level, this.xp, this.xpToNextLevel());
+  }
+
+  grantGold(amount) {
+    this.gold += amount;
+    this.ui?.setGold?.(this.gold);
+  }
+
+  initAbilities() {
+    // Простейшие заглушки способностей
+    this.abilities = {
+      Q: { key: 'Q', name: 'Dash', cooldown: 6, desc: 'Рывок вперёд на короткую дистанцию', timer: 0 },
+      W: { key: 'W', name: 'Shield', cooldown: 10, desc: 'Щит на 2 сек (поглощает урон)', timer: 0 },
+      E: { key: 'E', name: 'Slow', cooldown: 8, desc: 'Замедляет цель', timer: 0 },
+      R: { key: 'R', name: 'Overdrive', cooldown: 30, desc: 'Временное усиление урона и скорости', timer: 0 },
+    };
+    this.ui?.setAbilities?.(this.abilities);
+    window.addEventListener('keydown', (e) => this.onKeyAbility(e));
+  }
+
+  onKeyAbility(e) {
+    const k = e.key.toUpperCase();
+    const ab = this.abilities?.[k];
+    if (!ab) return;
+    if (ab.timer > 0) return;
+    // Активируем
+    if (k === 'Q') {
+      const dir = new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(0, this.group.rotation.y, 0));
+      this.group.position.addScaledVector(dir, 4);
+    } else if (k === 'W') {
+      this.hp = Math.min(this.maxHp, this.hp + 80);
+      this.updateHpBar();
+      this.ui?.setHP(this.hp);
+    } else if (k === 'E') {
+      // В прототипе: сообщение
+      this.ui?.announce?.('E: Slow — заглушка');
+    } else if (k === 'R') {
+      this.ui?.announce?.('R: Overdrive — заглушка');
+      this.attackDamage *= 1.5;
+      setTimeout(() => { this.attackDamage /= 1.5; }, 4000);
+    }
+    ab.timer = ab.cooldown;
+  }
+
   updateHpBar() {
     const ratio = Math.max(0, this.hp / this.maxHp);
     const fg = this.healthBar.userData.fg;
@@ -252,6 +321,16 @@ export class Player {
 
   update(dt) {
     this.attackTimer = Math.max(0, this.attackTimer - dt);
+    // кулдауны способностей
+    if (this.abilities) {
+      const remains = {};
+      for (const k of Object.keys(this.abilities)) {
+        const a = this.abilities[k];
+        if (a.timer > 0) a.timer = Math.max(0, a.timer - dt);
+        remains[k] = a.timer;
+      }
+      this.ui?.updateAbilityCooldowns?.(remains);
+    }
     // Обновляем луч от мыши (для кликов)
     this.raycaster.setFromCamera(this.mouse, this.camera);
 
