@@ -150,10 +150,8 @@ export class Player {
       if (u === this) continue;
       if (!u.group) continue;
       const box = new THREE.Box3().setFromObject(u.group);
-      const invMat = new THREE.Matrix4().copy(u.group.matrixWorld).invert();
-      const localRay = this.raycaster.ray.clone();
-      // Оценка: используем глобальный box, без трансформации луча
-      const intersect = box.distanceToPoint(this.raycaster.ray.origin) === 0 || box.intersectsRay(this.raycaster.ray);
+      // Проверяем пересечение луча с AABB юнита (глобальные координаты)
+      const intersect = this.raycaster.ray.intersectsBox(box);
       if (intersect) { clickedUnit = u; break; }
     }
 
