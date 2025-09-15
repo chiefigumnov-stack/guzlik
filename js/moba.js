@@ -62,6 +62,9 @@ export class MobaWorld {
     // Награды
     this.creepGold = 35;
     this.creepXP = 48;
+
+    // Глобальная остановка времени (для ульты Антуана)
+    this.globalStopTimer = 0;
   }
 
   registerUnit(unit) {
@@ -133,6 +136,11 @@ export class MobaWorld {
   }
 
   update(dt, player) {
+    // Глобальная пауза: когда активна — только рендер/таймер
+    if (this.globalStopTimer > 0) {
+      this.globalStopTimer = Math.max(0, this.globalStopTimer - dt);
+      return;
+    }
     // Волны
     this.waveTimer -= dt;
     if (this.waveTimer <= 0) {
@@ -185,6 +193,21 @@ export class MobaWorld {
 
   updateEnemyHero(dt) {
     this.enemyHero.update(dt);
+  }
+
+  spawnDemons(caster, count, life, ability) {
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      const pos = caster.group.position.clone().add(new THREE.Vector3(Math.cos(angle) * 2, 0, Math.sin(angle) * 2));
+      const d = new Creep({ scene: this.scene, world: this, team: caster.team, position: pos, waypoints: [] });
+      d.unitType = 'creep';
+      d.speed = 4.5; d.damage = 22; d.hp = d.maxHp = 240; d.aggroRadius = 8.0; d.range = 2.0; d.attackCooldown = 1.0;
+      d._lifeTimer = life;
+      const oldUpdate = d.update.bind(d);
+      d.update = (dt2) => { d._lifeTimer -= dt2; if (d._lifeTimer <= 0) { d.hp = 0; } oldUpdate(dt2); };
+      this.creeps.push(d);
+      this.registerUnit(d);
+    }
   }
 }
 

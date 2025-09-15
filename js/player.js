@@ -215,7 +215,8 @@ export class Player {
 
   initAbilities() {
     // Настоящий набор способностей через фабрику
-    this.abilities = (this.defaultAbilitiesFactory ? this.defaultAbilitiesFactory() : {});
+    // Если фабрика поддерживает heroKey — используем её расширенный набор
+    this.abilities = (this.defaultAbilitiesFactory ? this.defaultAbilitiesFactory(this.heroKey) : {});
     // Базовая мана
     this.maxMana = 300; this.mana = 300;
     this.ui?.setMana?.(this.mana, this.maxMana);

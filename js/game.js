@@ -11,7 +11,7 @@ import { Player } from "./player.js";
 import { EnemyManager } from "./enemy.js";
 import { MobaWorld, Teams } from "./moba.js";
 import { ProjectileManager } from "./projectiles.js";
-import { AbilitySystem, createDefaultAbilities } from "./abilities.js";
+import { AbilitySystem, createDefaultAbilities, createAbilitiesForHero } from "./abilities.js";
 import { Network } from "./network.js";
 
 // Глобальные константы сцены
@@ -99,7 +99,7 @@ class Game {
       world: this.world,
       team: Teams.Radiant,
       abilitySystem: this.abilitySystem,
-      defaultAbilitiesFactory: createDefaultAbilities,
+      defaultAbilitiesFactory: (heroKey) => createAbilitiesForHero(heroKey),
       heroKey: chosen,
     });
     this.world.registerUnit(this.player);

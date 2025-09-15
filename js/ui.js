@@ -186,7 +186,7 @@ export function createUI() {
           <div style="font-weight:700">${h.name}</div>
           <div style="opacity:0.8;font-size:12px;">${h.role || ''}</div>
         `;
-        card.addEventListener('click', () => { onSelect?.(h.key); this.hideHeroSelect(); });
+        card.addEventListener('click', () => { onSelect?.(h.key); heroSelect.style.display = "none"; });
         heroGrid.appendChild(card);
       });
       heroSelect.style.display = "flex";
