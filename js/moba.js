@@ -440,11 +440,13 @@ class Tower {
     this.attackTimer = 0;
     this.hp = 1000;
     this.maxHp = 1000;
+    this.unitType = 'tower';
 
     this.group = new THREE.Group();
     this.group.position.copy(this.position);
     this.loadModel();
     scene.add(this.group);
+    this.position = this.group.position;
   }
 
   loadModel() {
@@ -505,6 +507,7 @@ class AIHero {
     const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 1.2, 4, 12), new THREE.MeshStandardMaterial({ color: 0x3949ab }));
     mesh.castShadow = true; mesh.receiveShadow = true; this.group.add(mesh);
     this.scene.add(this.group);
+    this.position = this.group.position;
   }
 
   isDead() { return this.hp <= 0; }
