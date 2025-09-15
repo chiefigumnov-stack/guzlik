@@ -55,7 +55,7 @@ export class Player {
     this.position = new THREE.Vector3(0, 0, 0);
     this.velocity = new THREE.Vector3();
     // Герой и статы
-    this.heroKey = "avocado";
+    this.heroKey = "CM-01"; // по умолчанию — ваш герой
     const def = HERO_DEFS[this.heroKey];
     this.speed = def.base.moveSpeed;
     this.maxHp = def.base.maxHp;
@@ -87,6 +87,7 @@ export class Player {
 
     // Инициализируем HUD значениями HP
     this.ui?.setHP(this.hp);
+    this.ui?.setHeroCard?.({ name: def.name, role: def.role, portrait: def.portrait });
 
     // Управление кликами
     this.moveTarget = null; // точка назначения

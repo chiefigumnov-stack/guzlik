@@ -15,6 +15,30 @@ export function createUI() {
   `;
   root.appendChild(topLeft);
 
+  // Портрет и имя героя — левый верх (над остальным)
+  const heroCard = document.createElement("div");
+  Object.assign(heroCard.style, {
+    position: "absolute",
+    top: "12px",
+    right: "12px",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    background: "rgba(0,0,0,0.35)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: "8px",
+    padding: "8px 10px",
+    pointerEvents: "none",
+  });
+  heroCard.innerHTML = `
+    <img id="ui-portrait" src="" alt="portrait" style="width:44px;height:44px;border-radius:6px;object-fit:cover;filter:saturate(1.05);"/>
+    <div>
+      <div id="ui-hero-name" style="font-weight:700">Hero</div>
+      <div id="ui-hero-role" style="opacity:0.8;font-size:12px;">Role</div>
+    </div>
+  `;
+  root.appendChild(heroCard);
+
   // Центровой прицел
   const crosshair = document.createElement("div");
   crosshair.id = "crosshair";
@@ -30,6 +54,9 @@ export function createUI() {
   const hpEl = topLeft.querySelector("#ui-hp");
   const baseREl = topLeft.querySelector("#ui-base-r");
   const baseDEl = topLeft.querySelector("#ui-base-d");
+  const portraitEl = heroCard.querySelector("#ui-portrait");
+  const heroNameEl = heroCard.querySelector("#ui-hero-name");
+  const heroRoleEl = heroCard.querySelector("#ui-hero-role");
 
   // Сообщения по центру сверху
   const announce = document.createElement("div");
@@ -61,6 +88,11 @@ export function createUI() {
       announce.style.display = "block";
       clearTimeout(announce._t);
       announce._t = setTimeout(() => { announce.style.display = "none"; }, ms);
+    },
+    setHeroCard({ name, role, portrait }) {
+      if (portrait) portraitEl.src = portrait;
+      if (name) heroNameEl.textContent = name;
+      if (role) heroRoleEl.textContent = role;
     }
   };
 }

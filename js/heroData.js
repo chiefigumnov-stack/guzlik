@@ -20,5 +20,27 @@ export const HERO_DEFS = {
       moveSpeed: 0.1,
     },
   },
+  "CM-01": {
+    name: "Граф Антуан де Валуа",
+    role: "Философ, граф",
+    age: 34,
+    portrait: "https://i.ibb.co/bRGgWW1f/antuan.jpg",
+    // пока используем авокадо как заглушку модели; позже подменим на 3D-портрет
+    modelUrl: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Avocado/glTF/Avocado.gltf",
+    base: {
+      maxHp: 650,
+      attackDamage: 30,
+      attackRange: 3.5,
+      attackCooldown: 0.85,
+      moveSpeed: 10.5,
+    },
+    growth: {
+      maxHp: 85,
+      attackDamage: 3,
+      attackRange: 0.0,
+      attackCooldown: -0.02,
+      moveSpeed: 0.1,
+    },
+  },
 };
 
