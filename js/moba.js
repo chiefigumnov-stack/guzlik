@@ -2,14 +2,17 @@
 // Простая MOBA-система: команды, волны крипов, башни, базы, поиск целей
 
 import * as THREE from "https://unpkg.com/three@0.160.1/build/three.module.js";
+import { GLTFLoader } from "https://unpkg.com/three@0.160.1/examples/jsm/loaders/GLTFLoader.js";
 
 export const Teams = { Radiant: 0, Dire: 1 };
+export const TeamNeutral = 2;
 
 export class MobaWorld {
   constructor({ scene, ui, arenaSize }) {
     this.scene = scene;
     this.ui = ui;
     this.arenaSize = arenaSize;
+    this.loader = new GLTFLoader();
 
     this.units = []; // все боевые сущности (игрок, крипы, башни)
     this.creeps = [];
@@ -55,6 +58,8 @@ export class MobaWorld {
 
     // Создаём башни
     this.createTowers();
+    this.createForest();
+    this.spawnNeutralCamps();
 
     // Обновляем UI баз
     this.ui?.setBases?.(this.baseHp[Teams.Radiant], this.baseHp[Teams.Dire]);
@@ -110,8 +115,8 @@ export class MobaWorld {
     for (const lane of Object.keys(positions)) {
       const rPos = positions[lane].r;
       const dPos = positions[lane].d;
-      const rTower = new Tower({ scene: this.scene, world: this, team: Teams.Radiant, position: rPos, lane });
-      const dTower = new Tower({ scene: this.scene, world: this, team: Teams.Dire, position: dPos, lane });
+      const rTower = new Tower({ scene: this.scene, world: this, loader: this.loader, team: Teams.Radiant, position: rPos, lane });
+      const dTower = new Tower({ scene: this.scene, world: this, loader: this.loader, team: Teams.Dire, position: dPos, lane });
       this.towers.push(rTower, dTower);
       this.registerUnit(rTower);
       this.registerUnit(dTower);
@@ -127,11 +132,45 @@ export class MobaWorld {
       for (let i = 0; i < this.creepsPerWave; i++) {
         const offset = (i - (this.creepsPerWave - 1) / 2) * 0.8;
         const spawn = new THREE.Vector3(start.x + offset, 0, start.z + offset);
-        const creep = new Creep({ scene: this.scene, world: this, team, position: spawn, waypoints: wp });
+        const creep = new Creep({ scene: this.scene, world: this, loader: this.loader, team, position: spawn, waypoints: wp });
         creep.unitType = "creep";
         this.creeps.push(creep);
         this.registerUnit(creep);
       }
+    }
+  }
+
+  createForest() {
+    // Простая генерация деревьев в зонах между линиями
+    const trees = new THREE.Group();
+    const makeTree = (x,z) => {
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1.2, 8), new THREE.MeshStandardMaterial({ color: 0x6d4c41 }));
+      trunk.position.set(x, 0.6, z);
+      trunk.castShadow = true; trunk.receiveShadow = true;
+      const crown = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.2, 8), new THREE.MeshStandardMaterial({ color: 0x2e7d32 }));
+      crown.position.set(x, 1.6, z);
+      crown.castShadow = true; crown.receiveShadow = true;
+      trees.add(trunk); trees.add(crown);
+    };
+    const half = this.arenaSize/2 - 2;
+    for (let x=-half+2; x<=half-2; x+=4) {
+      for (let z=-half+2; z<=half-2; z+=6) {
+        // избегаем полос вокруг линий
+        if (Math.abs(x - z) < 3 || Math.abs(x + z) < 3) continue;
+        if (Math.random() < 0.35) makeTree(x,z);
+      }
+    }
+    trees.name = 'Forest';
+    this.scene.add(trees);
+  }
+
+  spawnNeutralCamps() {
+    // Несколько точек лагерей
+    this.neutrals = [];
+    const camps = [ new THREE.Vector3(-10,0,14), new THREE.Vector3(12,0,-12) ];
+    for (const p of camps) {
+      const n = new Neutral({ scene: this.scene, world: this, loader: this.loader, position: p });
+      this.neutrals.push(n); this.registerUnit(n);
     }
   }
 
@@ -212,9 +251,10 @@ export class MobaWorld {
 }
 
 class Creep {
-  constructor({ scene, world, team, position, waypoints }) {
+  constructor({ scene, world, loader, team, position, waypoints }) {
     this.scene = scene;
     this.world = world;
+    this.loader = loader;
     this.team = team;
     this.position = position.clone();
     this.waypoints = waypoints.map(p => p.clone());
@@ -231,12 +271,27 @@ class Creep {
 
     this.group = new THREE.Group();
     this.group.position.copy(this.position);
-    this.mesh = this.createMesh();
-    this.group.add(this.mesh);
+    this.root = new THREE.Group();
+    this.group.add(this.root);
+    this.loadModel();
     this.healthBar = this.createHealthBar(1.2, 0.12);
     this.healthBar.position.set(0, 1.6, 0);
     this.group.add(this.healthBar);
     this.scene.add(this.group);
+  }
+
+  loadModel() {
+    const url = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf";
+    this.loader.load(url, (gltf) => {
+      const model = gltf.scene || gltf.scenes?.[0];
+      if (model) {
+        model.traverse(o=>{ if (o.isMesh){ o.castShadow=true; o.receiveShadow=true; }});
+        const box = new THREE.Box3().setFromObject(model); const size = new THREE.Vector3(); box.getSize(size);
+        const scale = 1.0 / Math.max(size.x, size.y, size.z);
+        model.scale.setScalar(scale);
+        this.root.add(model);
+      }
+    });
   }
 
   createMesh() {
@@ -345,9 +400,10 @@ class Creep {
 }
 
 class Tower {
-  constructor({ scene, world, team, position }) {
+  constructor({ scene, world, loader, team, position }) {
     this.scene = scene;
     this.world = world;
+    this.loader = loader;
     this.team = team;
     this.position = position.clone();
     this.range = 12;
@@ -359,10 +415,22 @@ class Tower {
 
     this.group = new THREE.Group();
     this.group.position.copy(this.position);
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.0, 3.0, 12), new THREE.MeshStandardMaterial({ color: team === Teams.Radiant ? 0x80cbc4 : 0xce93d8 }));
-    base.castShadow = true; base.receiveShadow = true;
-    this.group.add(base);
+    this.loadModel();
     scene.add(this.group);
+  }
+
+  loadModel() {
+    const url = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF/CesiumMan.gltf";
+    this.loader.load(url, (gltf) => {
+      const model = gltf.scene || gltf.scenes?.[0];
+      if (model) {
+        model.traverse(o=>{ if (o.isMesh){ o.castShadow=true; o.receiveShadow=true; }});
+        const box = new THREE.Box3().setFromObject(model); const size = new THREE.Vector3(); box.getSize(size);
+        const scale = 1.8 / Math.max(size.x, size.y, size.z);
+        model.scale.setScalar(scale);
+        this.group.add(model);
+      }
+    });
   }
 
   isDead() { return this.hp <= 0; }
