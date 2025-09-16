@@ -1,29 +1,19 @@
 export class GameMap {
   constructor() {
-    // Simple 2-lane like: actually 1 lane diagonal with bases and 3 towers each
-    this.width = 2600;
-    this.height = 2600;
-    this.radiantBase = { x: 300, y: 2300 };
-    this.direBase = { x: 2300, y: 300 };
-    // Lane points (path)
+    // Compact single-lane brawl map
+    this.width = 1600;
+    this.height = 1600;
+    this.radiantBase = { x: 280, y: 1320 };
+    this.direBase = { x: 1320, y: 280 };
+    // Short diagonal lane with midpoint focused for fights
     this.path = [
-      { x: 360, y: 2240 },
-      { x: 800, y: 1800 },
-      { x: 1200, y: 1400 },
-      { x: 1700, y: 900 },
-      { x: 2240, y: 360 }
+      { x: 360, y: 1240 },
+      { x: 800, y: 800 },
+      { x: 1240, y: 360 }
     ];
-    // Tower placements near lane
-    this.radiantTowers = [
-      { x: 520, y: 2080 },
-      { x: 840, y: 1760 },
-      { x: 1120, y: 1480 }
-    ];
-    this.direTowers = [
-      { x: 2080, y: 520 },
-      { x: 1760, y: 840 },
-      { x: 1480, y: 1120 }
-    ];
+    // One tower per side near lane
+    this.radiantTowers = [ { x: 560, y: 1040 } ];
+    this.direTowers = [ { x: 1040, y: 560 } ];
   }
 
   draw(ctx, camera) {

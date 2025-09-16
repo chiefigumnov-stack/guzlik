@@ -222,14 +222,14 @@ export class Hero extends Unit {
 export class Creep extends Unit {
   constructor(params) {
     super({ ...params, type: 'creep' });
-    this.speed = params.speed || 80;
+    this.speed = params.speed || 90;
     this.attackRange = params.attackRange || 45;
-    this.attackCooldown = params.attackCooldown || 1.2;
-    this.attackDamage = params.attackDamage || 12;
+    this.attackCooldown = params.attackCooldown || 1.0;
+    this.attackDamage = params.attackDamage || 14;
     this.radius = params.radius || 10;
     this.path = params.path || [];
     this.pathIndex = 0;
-    this.goldBounty = params.goldBounty || 35;
+    this.goldBounty = params.goldBounty || 40;
   }
 
   update(dt, world) {

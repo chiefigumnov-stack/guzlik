@@ -54,7 +54,7 @@ export class Game {
 
     // Waves
     this.nextCreepWaveTime = 5; // seconds
-    this.creepWaveInterval = 30;
+    this.creepWaveInterval = 20; // faster waves for brawls
 
     // Setup selection list
     this.heroChoices = listHeroDefs();
@@ -63,7 +63,9 @@ export class Game {
     // Spawn enemy placeholder to avoid null logic later; actual enemy will spawn on match start
     this.enemyHero = createHeroFromDef(this.enemyHeroKey, TEAM_DIRE, this.map.direBase.x - 60, this.map.direBase.y + 60);
     this.entities.push(this.enemyHero);
-    this.centerCameraAt(this.map.radiantBase.x + 200, this.map.radiantBase.y - 200);
+    // Center at mid-lane
+    const mid = this.map.path[Math.floor(this.map.path.length / 2)];
+    this.centerCameraAt(mid.x, mid.y);
   }
 
   endGame(winnerTeam) {
@@ -176,7 +178,7 @@ export class Game {
   }
 
   spawnCreepWave() {
-    const count = 4;
+    const count = 5;
     for (let i = 0; i < count; i++) {
       const r = new Creep({ team: TEAM_RADIANT, x: this.map.radiantBase.x + 20, y: this.map.radiantBase.y - 20, path: this.map.path, maxHp: 240 });
       const d = new Creep({ team: TEAM_DIRE, x: this.map.direBase.x - 20, y: this.map.direBase.y + 20, path: [...this.map.path].reverse(), maxHp: 240 });
