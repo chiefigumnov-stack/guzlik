@@ -122,7 +122,8 @@ export class Unit extends Entity {
     const dist = Math.hypot(dx, dy);
     if (dist > this.moveTolerance && this.speed > 0) {
       const dir = { x: dx / dist, y: dy / dist };
-      const step = this.speed * dt;
+      const effectiveSpeed = (this.speed + (this.speedBonus || 0) + (this.speedBonusBuff || 0));
+      const step = effectiveSpeed * dt;
       if (step < dist) { this.x += dir.x * step; this.y += dir.y * step; } else { this.x = this.moveTargetX; this.y = this.moveTargetY; }
     }
     // Target selection: prefer explicit attack order target
@@ -157,7 +158,9 @@ export class Unit extends Entity {
     this.attackCooldownRemaining = this.attackCooldown;
     const ang = angle(this.x, this.y, target.x, target.y);
     const vx = Math.cos(ang) * 400; const vy = Math.sin(ang) * 400;
-    world.spawn(new Projectile({ team: this.team, x: this.x, y: this.y, vx, vy, speed: 400, damage: this.attackDamage, sourceId: this.id, lifetime: 2 }));
+    const damageMult = this.damageBuffMultiplier || 1;
+    const damage = Math.max(1, Math.floor((this.attackDamage || 0) * damageMult));
+    world.spawn(new Projectile({ team: this.team, x: this.x, y: this.y, vx, vy, speed: 400, damage, sourceId: this.id, lifetime: 2 }));
   }
 }
 
@@ -181,13 +184,29 @@ export class Hero extends Unit {
     this.abilityLevelQ = 1; this.abilityLevelE = 1; this.maxAbilityLevel = 4;
     this.abilityMeta = null; // from hero def
     this.heroKey = 'default'; this.heroTitle = 'Герой'; this.themeColor = '#93c5fd';
+    // Items/buffs
+    this.speedBonus = this.speedBonus || 0;
+    this.speedBonusBuff = 0;
+    this.damageBuffMultiplier = 1;
+    this.buffHasteTimer = 0;
+    this.buffRegenTimer = 0;
+    this.buffDDTimer = 0;
+    // Respawn
+    this.respawnTimer = 0;
   }
 
   update(dt, world) {
     super.update(dt, world);
     if (!this.alive) return;
-    this.mana = Math.min(this.maxMana, this.mana + this.manaRegen * dt);
-    this.hp = Math.min(this.maxHp, this.hp + this.hpRegen * dt);
+    // Buff timers and effects
+    if (this.buffHasteTimer > 0) { this.buffHasteTimer -= dt; if (this.buffHasteTimer <= 0) { this.speedBonusBuff = 0; } }
+    if (this.buffRegenTimer > 0) { this.buffRegenTimer -= dt; }
+    if (this.buffDDTimer > 0) { this.buffDDTimer -= dt; if (this.buffDDTimer <= 0) { this.damageBuffMultiplier = 1; } }
+
+    const extraHpRegen = this.buffRegenTimer > 0 ? 8 : 0;
+    const extraManaRegen = this.buffRegenTimer > 0 ? 8 : 0;
+    this.mana = Math.min(this.maxMana, this.mana + (this.manaRegen + extraManaRegen) * dt);
+    this.hp = Math.min(this.maxHp, this.hp + (this.hpRegen + extraHpRegen) * dt);
     if (this.abilityQCooldownRemaining > 0) this.abilityQCooldownRemaining -= dt;
     if (this.abilityECooldownRemaining > 0) this.abilityECooldownRemaining -= dt;
   }

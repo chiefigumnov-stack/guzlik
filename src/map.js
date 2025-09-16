@@ -14,6 +14,8 @@ export class GameMap {
     // One tower per side near lane
     this.radiantTowers = [ { x: 560, y: 1040 } ];
     this.direTowers = [ { x: 1040, y: 560 } ];
+    // Rune positions (center)
+    this.runeSpots = [ { x: 800, y: 800 } ];
   }
 
   draw(ctx, camera) {
@@ -40,6 +42,10 @@ export class GameMap {
     // Bases
     drawBase(ctx, this.radiantBase.x, this.radiantBase.y, '#16a34a');
     drawBase(ctx, this.direBase.x, this.direBase.y, '#dc2626');
+
+    // Runes spots indicator
+    ctx.fillStyle = 'rgba(59,130,246,0.15)';
+    for (const r of this.runeSpots) { ctx.beginPath(); ctx.arc(r.x, r.y, 18, 0, Math.PI * 2); ctx.fill(); }
 
     // Trees/obstacles simple grid dots for vibe
     ctx.fillStyle = '#0b1320';

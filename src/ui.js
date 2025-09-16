@@ -23,6 +23,10 @@ export class UIOverlay {
     ctx.fillStyle = '#60a5fa';
     ctx.fillRect(pad + 10, pad + 68, 220 * xpRatio, 6);
     ctx.fillText(`HP ${Math.ceil(hero.hp)}/${hero.maxHp} | MP ${Math.ceil(hero.mana)}/${hero.maxMana}`, pad + 10, pad + 82);
+    if (!hero.alive) {
+      ctx.fillStyle = '#f87171';
+      ctx.fillText(`Возрождение через: ${Math.ceil(hero.respawnTimer || 0)}с`, pad + 200, pad + 22);
+    }
 
     // Abilities box (Q/E)
     const baseX = ctx.canvas.width / 2 - 100;

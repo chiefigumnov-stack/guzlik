@@ -23,6 +23,9 @@ export class Game {
     this.gold = 600;
     this.gameOver = false;
     this.winner = null;
+    // Runes
+    this.runes = []; // {x,y,type,alive}
+    this.nextRuneTime = 30; // first at 30s
 
     this._lastTime = performance.now();
     this._accum = 0;
@@ -179,8 +182,45 @@ export class Game {
     // Simple enemy hero AI
     this.updateEnemyAI(dt);
 
+    // Handle respawn timers
+    if (!this.hero.alive) {
+      if (this.hero.respawnTimer == null || this.hero.respawnTimer <= 0) {
+        this.hero.respawnTimer = Math.max(4, Math.floor(2 + this.hero.level * 1.2));
+      } else {
+        this.hero.respawnTimer -= dt;
+        if (this.hero.respawnTimer <= 0) this.respawnHero(this.hero);
+      }
+    }
+    if (!this.enemyHero.alive) {
+      if (this.enemyHero.respawnTimer == null || this.enemyHero.respawnTimer <= 0) {
+        this.enemyHero.respawnTimer = Math.max(4, Math.floor(2 + this.enemyHero.level * 1.2));
+      } else {
+        this.enemyHero.respawnTimer -= dt;
+        if (this.enemyHero.respawnTimer <= 0) this.respawnHero(this.enemyHero);
+      }
+    }
+
+    // Rune spawns
+    if (this.elapsedTimeSec >= this.nextRuneTime) {
+      this.spawnRune();
+      this.nextRuneTime += 45; // every 45s
+    }
+
     // Update entities and collect dead
     for (const e of this.entities) e.update(dt, this);
+    // Check rune pickups
+    for (const r of this.runes) {
+      if (!r.alive) continue;
+      for (const u of [this.hero, this.enemyHero]) {
+        if (!u.alive) continue;
+        if (Math.hypot(u.x - r.x, u.y - r.y) <= (u.radius + 12)) {
+          if (r.type === 'haste') { u.speedBonusBuff = 80; u.buffHasteTimer = 12; }
+          else if (r.type === 'regen') { u.buffRegenTimer = 12; }
+          else if (r.type === 'dd') { u.damageBuffMultiplier = 2; u.buffDDTimer = 12; }
+          r.alive = false;
+        }
+      }
+    }
     // Spawn deferred
     if (this.toSpawn.length) {
       this.entities.push(...this.toSpawn);
@@ -203,6 +243,23 @@ export class Game {
 
     // Keep camera following hero a bit
     this.camera.x = this.hero.x; this.camera.y = this.hero.y;
+  }
+
+  spawnRune() {
+    const spot = this.map.runeSpots[0];
+    const types = ['haste', 'regen', 'dd'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    this.runes = [{ x: spot.x, y: spot.y, type, alive: true }];
+  }
+
+  respawnHero(hero) {
+    hero.alive = true;
+    hero.hp = hero.maxHp;
+    hero.mana = hero.maxMana;
+    hero.respawnTimer = 0;
+    if (hero.team === TEAM_RADIANT) { hero.x = this.map.radiantBase.x + 60; hero.y = this.map.radiantBase.y - 60; }
+    else { hero.x = this.map.direBase.x - 60; hero.y = this.map.direBase.y + 60; }
+    if (hero === this.hero) this.centerCameraOnHero();
   }
 
   updateEnemyAI(dt) {
@@ -237,6 +294,13 @@ export class Game {
     // Transform to world
     ctx.save();
     this.camera.applyWorldTransform(ctx, ctx.canvas.width, ctx.canvas.height);
+
+    // Runes
+    for (const r of this.runes) {
+      if (!r.alive) continue;
+      ctx.fillStyle = r.type === 'haste' ? '#60a5fa' : r.type === 'regen' ? '#34d399' : '#f59e0b';
+      ctx.beginPath(); ctx.arc(r.x, r.y, 10, 0, Math.PI * 2); ctx.fill();
+    }
 
     // Entities
     for (const e of this.entities) this.drawEntity(ctx, e);
