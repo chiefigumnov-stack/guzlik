@@ -51,6 +51,8 @@ export class Game {
     const desiredElevationDeg = 60;
     const cameraHeight = 45; // высота камеры над ареной
     const cameraDistance = cameraHeight / Math.tan(THREE.MathUtils.degToRad(desiredElevationDeg));
+    this.cameraHeight = cameraHeight;
+    this.cameraDistance = cameraDistance;
     this.camera.position.set(0, cameraHeight, cameraDistance);
     this.camera.lookAt(new THREE.Vector3(0, 0, 0));
 
@@ -168,6 +170,14 @@ export class Game {
     this.player.update(dt, this.scene, null);
     this.world.update(dt, this.player);
     this.projectiles.update(dt);
+
+    // Камера следует за героем (изометрия 60°) с небольшим сглаживанием
+    if (this.player && this.player.position) {
+      const p = this.player.position;
+      const desiredPos = new THREE.Vector3(p.x, this.cameraHeight, p.z + this.cameraDistance);
+      this.camera.position.lerp(desiredPos, 0.12);
+      this.camera.lookAt(p);
+    }
 
     // Рендер сцены
     this.renderer.render(this.scene, this.camera);
