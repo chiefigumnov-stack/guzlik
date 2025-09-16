@@ -33,9 +33,7 @@ export class GameMap {
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
     // World to screen transform
-    ctx.translate(ctx.canvas.width / 2, ctx.canvas.height / 2);
-    ctx.scale(camera.scale, camera.scale);
-    ctx.translate(-camera.x, -camera.y);
+    camera.applyWorldTransform(ctx, ctx.canvas.width, ctx.canvas.height);
 
     // Ground
     ctx.fillStyle = '#0f1b2b';

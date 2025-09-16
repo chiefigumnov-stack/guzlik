@@ -7,6 +7,8 @@ export class Camera {
     this.scale = 1;
     this.minScale = 0.4;
     this.maxScale = 2.0;
+    this.mode = 'iso'; // 'iso' | 'topdown'
+    this.isoYScale = 0.6;
   }
 
   updateFromInput(input, dt) {
@@ -23,6 +25,18 @@ export class Camera {
 
   jumpTo(x, y) {
     this.x = x; this.y = y;
+  }
+
+  applyWorldTransform(ctx, canvasWidth, canvasHeight) {
+    ctx.resetTransform();
+    ctx.translate(Math.floor(canvasWidth / 2), Math.floor(canvasHeight / 2));
+    if (this.mode === 'iso') {
+      ctx.rotate(-Math.PI / 4);
+      ctx.scale(this.scale, this.scale * this.isoYScale);
+    } else {
+      ctx.scale(this.scale, this.scale);
+    }
+    ctx.translate(-this.x, -this.y);
   }
 }
 

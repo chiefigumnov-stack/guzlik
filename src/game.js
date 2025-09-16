@@ -121,9 +121,10 @@ export class Game {
   }
 
   update(dt) {
+    // Always process input (for selection/pause)
+    this.handleInput();
     if (this.state === 'hero-select' || this.paused || this.gameOver) return;
     this.elapsedTimeSec += dt;
-    this.handleInput();
 
     // Spawn creep waves
     if (this.elapsedTimeSec >= this.nextCreepWaveTime) {
@@ -191,9 +192,7 @@ export class Game {
 
     // Transform to world
     ctx.save();
-    ctx.translate(ctx.canvas.width / 2, ctx.canvas.height / 2);
-    ctx.scale(this.camera.scale, this.camera.scale);
-    ctx.translate(-this.camera.x, -this.camera.y);
+    this.camera.applyWorldTransform(ctx, ctx.canvas.width, ctx.canvas.height);
 
     // Entities
     for (const e of this.entities) this.drawEntity(ctx, e);
@@ -320,8 +319,25 @@ export class Game {
   }
 
   screenToWorld(sx, sy) {
-    const x = (sx - this.canvas.width / 2) / this.camera.scale + this.camera.x;
-    const y = (sy - this.canvas.height / 2) / this.camera.scale + this.camera.y;
+    // Inverse of applyWorldTransform
+    const cx = sx - this.canvas.width / 2;
+    const cy = sy - this.canvas.height / 2;
+    let x = cx, y = cy;
+    if (this.camera.mode === 'iso') {
+      const invScaleX = 1 / this.camera.scale;
+      const invScaleY = 1 / (this.camera.scale * this.camera.isoYScale);
+      const rx = x * invScaleX;
+      const ry = y * invScaleY;
+      // inverse rotate by +45deg
+      const cos = Math.cos(Math.PI / 4), sin = Math.sin(Math.PI / 4);
+      const wx = rx * cos - ry * sin;
+      const wy = rx * sin + ry * cos;
+      x = wx + this.camera.x;
+      y = wy + this.camera.y;
+    } else {
+      x = x / this.camera.scale + this.camera.x;
+      y = y / this.camera.scale + this.camera.y;
+    }
     return { x, y };
   }
 }

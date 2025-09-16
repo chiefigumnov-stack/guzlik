@@ -49,8 +49,21 @@ export class UIOverlay {
     for (const entity of this.game.entities) {
       if (!entity.alive) continue;
       if (!entity.maxHp || entity.maxHp <= 0) continue;
-      const screenX = (entity.x - camera.x) * camera.scale + ctx.canvas.width / 2;
-      const screenY = (entity.y - camera.y) * camera.scale + ctx.canvas.height / 2;
+      // Transform world->screen in iso mode for bar placement
+      let wx = entity.x - camera.x;
+      let wy = entity.y - camera.y;
+      if (camera.mode === 'iso') {
+        const cos = Math.cos(-Math.PI / 4), sin = Math.sin(-Math.PI / 4);
+        const rx = wx * cos - wy * sin;
+        const ry = wx * sin + wy * cos;
+        const sx = rx * camera.scale;
+        const sy = ry * camera.scale * camera.isoYScale;
+        wx = sx; wy = sy;
+      } else {
+        wx = wx * camera.scale; wy = wy * camera.scale;
+      }
+      const screenX = wx + ctx.canvas.width / 2;
+      const screenY = wy + ctx.canvas.height / 2;
       const width = Math.max(24, entity.radius * 2 * camera.scale);
       drawBar(screenX - width / 2, screenY - entity.radius * camera.scale - 14, width, 6, entity.hp / entity.maxHp, entity.team === 0 ? '#22c55e' : '#ef4444');
     }
