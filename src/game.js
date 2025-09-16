@@ -345,10 +345,14 @@ export class Game {
       const bx = x + 10 + i * 76; const by = y + 30; const bw = 72; const bh = 70;
       ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(bx, by, bw, bh);
       ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.strokeRect(bx, by, bw, bh);
-      ctx.fillStyle = '#94a3b8'; ctx.fillRect(bx + 8, by + 8, bw - 16, 28);
+      drawItemIcon(ctx, bx + 8, by + 8, bw - 16, it.key);
       ctx.fillStyle = '#e2e8f0'; ctx.font = '11px system-ui, sans-serif';
-      ctx.fillText(it.name, bx + 6, by + 50);
-      ctx.fillText(`${it.cost}g`, bx + 6, by + 64);
+      ctx.fillText(it.name, bx + 6, by + 46);
+      ctx.fillStyle = 'rgba(226,232,240,0.8)'; ctx.font = '10px system-ui, sans-serif';
+      const lines = wrapText(ctx, it.desc, bw - 12);
+      if (lines[0]) ctx.fillText(lines[0], bx + 6, by + 58);
+      ctx.fillStyle = '#fbbf24'; ctx.font = '11px system-ui, sans-serif';
+      ctx.fillText(`${it.cost}g`, bx + 6, by + 70);
     }
     ctx.restore();
   }

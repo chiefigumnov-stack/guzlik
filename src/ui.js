@@ -145,9 +145,35 @@ function drawItemSlot(ctx, x, y, size, slot, index) {
   ctx.font = '10px system-ui, sans-serif';
   ctx.fillText(String(index + 3), x + 4, y + 12);
   if (slot) {
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(x + 10, y + 10, size - 20, size - 20);
+    drawItemIcon(ctx, x + 10, y + 10, size - 20, slot.key);
   }
   ctx.restore();
+}
+
+function drawItemIcon(ctx, x, y, size, key) {
+  ctx.save();
+  // simple generated icons per key
+  const colorMap = {
+    clarity: '#60a5fa', salve: '#34d399', boots: '#eab308', wand: '#a78bfa',
+    lifesteal_mask: '#ef4444', claymore: '#f97316', magic_cloak: '#64748b', tp_scroll: '#22d3ee'
+  };
+  ctx.fillStyle = colorMap[key] || '#94a3b8';
+  ctx.fillRect(x, y, size, size);
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillRect(x, y + size - 8, size, 8);
+  ctx.restore();
+}
+
+function wrapText(ctx, text, maxWidth) {
+  const words = text.split(' ');
+  const lines = [];
+  let line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width <= maxWidth) line = test; else { lines.push(line); line = w; }
+    if (lines.length === 1) break; // one line only for compact UI
+  }
+  if (line) lines.push(line);
+  return lines.slice(0, 1);
 }
 
