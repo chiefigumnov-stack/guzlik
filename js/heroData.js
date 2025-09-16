@@ -26,8 +26,8 @@ export const HERO_DEFS = {
     age: 34,
     portrait: "https://i.ibb.co/bRGgWW1f/antuan.jpg",
     usePortraitBillboard: false,
-    // Временная бесплатная стилизованная (аниме-стайл) модель
-    modelUrl: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RobotExpressive/glTF-Binary/RobotExpressive.glb",
+    // Ссылка на вашу модель (Google Drive direct download)
+    modelUrl: "https://drive.google.com/uc?export=download&id=1KUn26LQSGy-5TLEnynNKuYWTkB1j1nTn",
     basicType: "melee",
     base: {
       maxHp: 650,

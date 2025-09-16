@@ -78,7 +78,7 @@ export class Player {
     // Загрузка модели героя
     this.heroRoot = new THREE.Group();
     this.group.add(this.heroRoot);
-    this.loadModel(HERO_URL);
+    this.loadModel(def.modelUrl || HERO_URL);
 
     // Хелсбар над героем
     this.healthBar = createHealthBar(2, 0.2);
