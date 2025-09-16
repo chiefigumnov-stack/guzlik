@@ -1,4 +1,5 @@
 import { Game } from './game.js';
+import { Renderer3D } from './renderer3d.js';
 
 const canvas = document.getElementById('game');
 
@@ -15,10 +16,18 @@ function resizeCanvasToDisplaySize() {
 function init() {
   resizeCanvasToDisplaySize();
   const game = new Game(canvas);
+  const webglCanvas = document.getElementById('webgl');
+  const renderer3d = new Renderer3D(webglCanvas);
   window.addEventListener('resize', () => {
     resizeCanvasToDisplaySize();
     game.handleResize();
+    renderer3d.resize();
   });
+  function render3dLoop() {
+    renderer3d.draw(game);
+    requestAnimationFrame(render3dLoop);
+  }
+  render3dLoop();
 }
 
 window.addEventListener('load', init);
