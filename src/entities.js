@@ -145,8 +145,7 @@ export class Unit extends Entity {
         // Chase until in range
         this.setMoveTarget(target.x, target.y);
       } else {
-        // Stop to attack
-        this.setMoveTarget(this.x, this.y);
+        // In range: do not override movement intention; keep moving
       }
       if (this.attackCooldownRemaining <= 0) {
         this.performAttack(target, world);
