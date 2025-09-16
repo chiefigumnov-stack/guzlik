@@ -22,6 +22,7 @@ export class Entity {
     this.targetId = null;
     this.blocking = !!params.blocking; // for buildings
     this.onDeath = params.onDeath || null;
+    this.hitFlash = 0; // seconds
   }
 
   isEnemy(other) { return other && other.team !== this.team; }
@@ -29,6 +30,7 @@ export class Entity {
   takeDamage(amount, source) {
     if (!this.alive) return;
     this.hp -= amount;
+    this.hitFlash = 0.18;
     if (this.hp <= 0) {
       this.alive = false;
       if (this.onDeath) this.onDeath(this, source);
@@ -38,6 +40,7 @@ export class Entity {
   update(dt, world) {
     if (!this.alive) return;
     if (this.attackCooldownRemaining > 0) this.attackCooldownRemaining -= dt;
+    if (this.hitFlash > 0) this.hitFlash -= dt;
   }
 
   tryAcquireTarget(world, maxDist = this.attackRange + 10) {
@@ -103,6 +106,9 @@ export class Unit extends Entity {
     this.moveTargetX = this.x;
     this.moveTargetY = this.y;
     this.moveTolerance = params.moveTolerance || 8;
+    this.attackOrderTargetId = null; // explicit attack order target
+    this.attackMovePointX = null;
+    this.attackMovePointY = null;
   }
 
   setMoveTarget(x, y) { this.moveTargetX = x; this.moveTargetY = y; }
@@ -119,13 +125,31 @@ export class Unit extends Entity {
       const step = this.speed * dt;
       if (step < dist) { this.x += dir.x * step; this.y += dir.y * step; } else { this.x = this.moveTargetX; this.y = this.moveTargetY; }
     }
-    // Auto attack
-    let target = this.getTarget(world);
-    if (!target || !target.alive || distance(this.x, this.y, target.x, target.y) > this.attackRange + 2) {
-      target = this.tryAcquireTarget(world, this.attackRange + 2);
+    // Target selection: prefer explicit attack order target
+    let target = null;
+    if (this.attackOrderTargetId) {
+      const ord = world.entities.find((e) => e.id === this.attackOrderTargetId && e.alive);
+      if (ord && this.isEnemy(ord)) target = ord; else this.attackOrderTargetId = null;
     }
-    if (target && this.attackCooldownRemaining <= 0) {
-      this.performAttack(target, world);
+    if (!target) {
+      target = this.getTarget(world);
+      if (!target || !target.alive || distance(this.x, this.y, target.x, target.y) > this.attackRange + 2) {
+        target = this.tryAcquireTarget(world, this.attackRange + 2);
+      }
+    }
+
+    if (target) {
+      const dTo = Math.hypot(target.x - this.x, target.y - this.y);
+      if (dTo > this.attackRange - 4) {
+        // Chase until in range
+        this.setMoveTarget(target.x, target.y);
+      } else {
+        // Stop to attack
+        this.setMoveTarget(this.x, this.y);
+      }
+      if (this.attackCooldownRemaining <= 0) {
+        this.performAttack(target, world);
+      }
     }
   }
 

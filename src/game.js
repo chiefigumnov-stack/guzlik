@@ -83,10 +83,25 @@ export class Game {
       if (clicks.left) this.handleHeroSelectClick();
       return;
     }
-    // Right click: move hero to world coords
+    // Right click: context order (attack-move or attack target if enemy under cursor)
     if (clicks.right) {
       const world = this.screenToWorld(this.input.mouseScreenX, this.input.mouseScreenY);
-      this.hero.setMoveTarget(world.x, world.y);
+      // Find topmost entity under cursor
+      let clicked = null; let bestDist = Infinity;
+      for (const e of this.entities) {
+        if (!e.alive || e.type === 'projectile') continue;
+        const d = Math.hypot(world.x - e.x, world.y - e.y) - e.radius;
+        if (d <= 8 && d < bestDist) { bestDist = d; clicked = e; }
+      }
+      if (clicked && this.hero.isEnemy(clicked)) {
+        this.hero.attackOrderTargetId = clicked.id;
+        this.hero.setMoveTarget(clicked.x, clicked.y);
+      } else {
+        // attack-move to point
+        this.hero.attackOrderTargetId = null;
+        this.hero.attackMovePointX = world.x; this.hero.attackMovePointY = world.y;
+        this.hero.setMoveTarget(world.x, world.y);
+      }
     }
     // Q/E abilities
     if (this.input.isKeyDown('q')) {
@@ -288,30 +303,48 @@ export class Game {
   drawEntity(ctx, e) {
     ctx.save();
     if (e.type === 'projectile') {
-      ctx.fillStyle = e.team === TEAM_RADIANT ? '#f59e0b' : '#a78bfa';
-      ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
+      // stylized projectile
+      ctx.strokeStyle = e.team === TEAM_RADIANT ? '#f59e0b' : '#a78bfa';
+      ctx.fillStyle = e.team === TEAM_RADIANT ? 'rgba(245,158,11,0.2)' : 'rgba(167,139,250,0.2)';
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 1.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.restore(); return;
     }
     if (e.type === 'tower') {
+      // shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.ellipse(e.x + 6, e.y + 10, 16, 8, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = e.team === TEAM_RADIANT ? '#34d399' : '#f87171';
-      ctx.fillRect(e.x - 14, e.y - 14, 28, 28);
+      ctx.fillRect(e.x - 14, e.y - 24, 28, 38);
       ctx.restore(); return;
     }
     if (e.type === 'building') {
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.ellipse(e.x + 6, e.y + 10, e.radius, e.radius * 0.5, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = e.team === TEAM_RADIANT ? '#16a34a' : '#dc2626';
-      ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(e.x, e.y - 6, e.radius, 0, Math.PI * 2); ctx.fill();
       ctx.restore(); return;
     }
     if (e.type === 'hero') {
+      // shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.ellipse(e.x + 6, e.y + 10, e.radius + 2, (e.radius + 2) * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+      // body
       ctx.fillStyle = e.team === TEAM_RADIANT ? '#93c5fd' : '#fca5a5';
-      ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
-      // facing indicator
-      ctx.strokeStyle = '#e5e7eb'; ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + e.radius, e.y); ctx.stroke();
+      if (e.hitFlash > 0) ctx.fillStyle = '#fde047';
+      ctx.beginPath(); ctx.arc(e.x, e.y - 4, e.radius, 0, Math.PI * 2); ctx.fill();
+      // selection ring on player hero
+      if (this.hero && e.id === this.hero.id) {
+        ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(e.x, e.y + 2, e.radius + 3, 0, Math.PI * 2); ctx.stroke();
+      }
       ctx.restore(); return;
     }
     if (e.type === 'creep' || e.type === 'unit') {
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.beginPath(); ctx.ellipse(e.x + 4, e.y + 8, e.radius, e.radius * 0.5, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = e.team === TEAM_RADIANT ? '#10b981' : '#ef4444';
-      ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
+      if (e.hitFlash > 0) ctx.fillStyle = '#fde047';
+      ctx.beginPath(); ctx.arc(e.x, e.y - 2, e.radius, 0, Math.PI * 2); ctx.fill();
       ctx.restore(); return;
     }
     // default
