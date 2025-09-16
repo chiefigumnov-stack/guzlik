@@ -88,6 +88,9 @@ export class Projectile extends Entity {
       const d = distance(this.x, this.y, e.x, e.y);
       if (d <= (this.radius + e.radius)) {
         e.takeDamage(this.damage, this);
+        // mark last hit attribution
+        const src = world.entities.find((x) => x.id === this.sourceId);
+        if (src) e._lastHitBy = src;
         this.alive = false; break;
       }
     }
@@ -146,9 +149,14 @@ export class Hero extends Unit {
     this.attackCooldown = params.attackCooldown || 0.8;
     this.attackDamage = params.attackDamage || 22;
     this.radius = params.radius || 12;
-    // Abilities
+    // Abilities (default; can be overridden by hero def)
     this.abilityQCost = 60; this.abilityQCooldown = 6; this.abilityQCooldownRemaining = 0; // fireball
     this.abilityECost = 50; this.abilityECooldown = 8; this.abilityECooldownRemaining = 0; // heal
+    // Progression
+    this.level = 1; this.xp = 0; this.skillPoints = 0;
+    this.abilityLevelQ = 1; this.abilityLevelE = 1; this.maxAbilityLevel = 4;
+    this.abilityMeta = null; // from hero def
+    this.heroKey = 'default'; this.heroTitle = 'Герой'; this.themeColor = '#93c5fd';
   }
 
   update(dt, world) {
@@ -164,15 +172,50 @@ export class Hero extends Unit {
     if (this.abilityQCooldownRemaining > 0 || this.mana < this.abilityQCost) return false;
     this.mana -= this.abilityQCost; this.abilityQCooldownRemaining = this.abilityQCooldown;
     const dir = normalize(targetX - this.x, targetY - this.y);
-    world.spawn(new Projectile({ team: this.team, x: this.x, y: this.y, vx: dir.x * 520, vy: dir.y * 520, speed: 520, damage: 120, sourceId: this.id, lifetime: 2.2 }));
+    const meta = this.abilityMeta ? this.abilityMeta.q : null;
+    const damage = meta ? meta.damageBase + (this.abilityLevelQ - 1) * meta.damagePerLevel : 120;
+    world.spawn(new Projectile({ team: this.team, x: this.x, y: this.y, vx: dir.x * 520, vy: dir.y * 520, speed: 520, damage, sourceId: this.id, lifetime: 2.2 }));
     return true;
   }
 
   castE(world) {
     if (this.abilityECooldownRemaining > 0 || this.mana < this.abilityECost) return false;
     this.mana -= this.abilityECost; this.abilityECooldownRemaining = this.abilityECooldown;
-    this.hp = Math.min(this.maxHp, this.hp + 140);
+    const meta = this.abilityMeta ? this.abilityMeta.e : null;
+    const heal = meta ? meta.healBase + (this.abilityLevelE - 1) * meta.healPerLevel : 140;
+    this.hp = Math.min(this.maxHp, this.hp + heal);
     return true;
+  }
+
+  updateAbilityTuning() {
+    if (!this.abilityMeta) return;
+    const q = this.abilityMeta.q, e = this.abilityMeta.e;
+    this.abilityQCooldown = Math.max(2, q.cooldownBase + (this.abilityLevelQ - 1) * (q.cooldownGain || 0));
+    this.abilityQCost = q.cost;
+    this.abilityECooldown = Math.max(2, e.cooldownBase + (this.abilityLevelE - 1) * (e.cooldownGain || 0));
+    this.abilityECost = e.cost;
+  }
+
+  grantXP(amount) {
+    this.xp += amount;
+    while (this.xp >= this.xpToNextLevel()) {
+      this.xp -= this.xpToNextLevel();
+      this.level++;
+      this.skillPoints++;
+      this.maxHp += 40; this.hp = Math.min(this.maxHp, this.hp + 40);
+      this.attackDamage += 2;
+    }
+  }
+
+  xpToNextLevel() {
+    return 100 + (this.level - 1) * 50;
+  }
+
+  tryUpgradeAbility(which) {
+    if (this.skillPoints <= 0) return false;
+    if (which === 'q' && this.abilityLevelQ < this.maxAbilityLevel) { this.abilityLevelQ++; this.skillPoints--; this.updateAbilityTuning(); return true; }
+    if (which === 'e' && this.abilityLevelE < this.maxAbilityLevel) { this.abilityLevelE++; this.skillPoints--; this.updateAbilityTuning(); return true; }
+    return false;
   }
 }
 

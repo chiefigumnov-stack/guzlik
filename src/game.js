@@ -3,6 +3,7 @@ import { InputManager } from './input.js';
 import { UIOverlay } from './ui.js';
 import { GameMap } from './map.js';
 import { Hero, Creep, Tower, Building, Projectile, TEAM_RADIANT, TEAM_DIRE } from './entities.js';
+import { createHeroFromDef, listHeroDefs } from './heroes.js';
 import { clamp } from './utils.js';
 
 export class Game {
@@ -27,6 +28,7 @@ export class Game {
     this._tickRate = 60; // fixed step
     this._dtFixed = 1 / this._tickRate;
 
+    this.state = 'hero-select'; // 'hero-select' | 'playing' | 'game-over'
     this.initWorld();
     this.loop = this.loop.bind(this);
     requestAnimationFrame(this.loop);
@@ -38,13 +40,8 @@ export class Game {
   }
 
   initWorld() {
-    // Hero spawn near Radiant base
-    this.hero = new Hero({ team: TEAM_RADIANT, x: this.map.radiantBase.x + 60, y: this.map.radiantBase.y - 60 });
-    this.entities.push(this.hero);
-
-    // Enemy hero simple
-    this.enemyHero = new Hero({ team: TEAM_DIRE, x: this.map.direBase.x - 60, y: this.map.direBase.y + 60 });
-    this.entities.push(this.enemyHero);
+    this.entities.length = 0;
+    // Place neutral buildings (towers and ancients) first so selection UI can render over empty lane
 
     // Towers
     for (const t of this.map.radiantTowers) this.entities.push(new Tower({ team: TEAM_RADIANT, x: t.x, y: t.y, maxHp: 900, attackRange: 240, attackDamage: 28 }));
@@ -59,21 +56,31 @@ export class Game {
     this.nextCreepWaveTime = 5; // seconds
     this.creepWaveInterval = 30;
 
-    this.centerCameraOnHero();
+    // Setup selection list
+    this.heroChoices = listHeroDefs();
+    this.selectedHeroKey = null;
+    this.enemyHeroKey = 'knight';
+    // Spawn enemy placeholder to avoid null logic later; actual enemy will spawn on match start
+    this.enemyHero = createHeroFromDef(this.enemyHeroKey, TEAM_DIRE, this.map.direBase.x - 60, this.map.direBase.y + 60);
+    this.entities.push(this.enemyHero);
+    this.centerCameraAt(this.map.radiantBase.x + 200, this.map.radiantBase.y - 200);
   }
 
   endGame(winnerTeam) {
-    this.gameOver = true; this.winner = winnerTeam;
+    this.gameOver = true; this.winner = winnerTeam; this.state = 'game-over';
   }
 
   spawn(entity) { this.toSpawn.push(entity); }
 
-  centerCameraOnHero() {
-    this.camera.x = this.hero.x; this.camera.y = this.hero.y;
-  }
+  centerCameraOnHero() { this.camera.x = this.hero.x; this.camera.y = this.hero.y; }
+  centerCameraAt(x, y) { this.camera.x = x; this.camera.y = y; }
 
   handleInput() {
     const clicks = this.input.consumeClicks();
+    if (this.state === 'hero-select') {
+      if (clicks.left) this.handleHeroSelectClick();
+      return;
+    }
     // Right click: move hero to world coords
     if (clicks.right) {
       const world = this.screenToWorld(this.input.mouseScreenX, this.input.mouseScreenY);
@@ -87,6 +94,9 @@ export class Game {
     if (this.input.isKeyDown('e')) {
       this.hero.castE(this);
     }
+    // Upgrade keys 1/2
+    if (this.input.isKeyDown('1')) { this.hero.tryUpgradeAbility('q'); }
+    if (this.input.isKeyDown('2')) { this.hero.tryUpgradeAbility('e'); }
     if (this.input.isKeyDown('p')) this.paused = true;
     if (this.input.isKeyDown('o')) this.paused = false;
     if (this.input.isKeyDown('r')) this.reset();
@@ -95,7 +105,7 @@ export class Game {
   }
 
   reset() {
-    this.entities.length = 0; this.toSpawn.length = 0; this.gold = 600; this.elapsedTimeSec = 0; this.gameOver = false; this.winner = null;
+    this.entities.length = 0; this.toSpawn.length = 0; this.gold = 600; this.elapsedTimeSec = 0; this.gameOver = false; this.winner = null; this.state = 'hero-select';
     this.initWorld();
   }
 
@@ -111,7 +121,7 @@ export class Game {
   }
 
   update(dt) {
-    if (this.paused || this.gameOver) return;
+    if (this.state === 'hero-select' || this.paused || this.gameOver) return;
     this.elapsedTimeSec += dt;
     this.handleInput();
 
@@ -131,11 +141,17 @@ export class Game {
       this.entities.push(...this.toSpawn);
       this.toSpawn.length = 0;
     }
-    // Clean up dead, add bounties
+    // Clean up dead, apply last-hit rewards
     const alive = [];
     for (const e of this.entities) {
       if (!e.alive) {
-        if (e.goldBounty && e.team !== this.hero.team) this.gold += e.goldBounty;
+        const killer = e._lastHitBy;
+        if (e.goldBounty && killer && killer.id === this.hero.id) {
+          this.gold += e.goldBounty;
+          this.hero.grantXP(40);
+        } else if (killer && killer.type === 'hero' && killer.team === this.hero.team) {
+          this.hero.grantXP(20);
+        }
       } else alive.push(e);
     }
     this.entities = alive;
@@ -185,9 +201,72 @@ export class Game {
 
     // UI
     this.ui.drawWorldBars(ctx, this.camera);
-    this.ui.drawHUD(ctx);
+    if (this.state === 'hero-select') this.drawHeroSelection(ctx);
+    else this.ui.drawHUD(ctx);
 
     if (this.gameOver) this.drawGameOver(ctx);
+  }
+
+  handleHeroSelectClick() {
+    const ctx = this.ctx;
+    const { width, height } = ctx.canvas;
+    const mx = this.input.mouseScreenX, my = this.input.mouseScreenY;
+    const cards = this.getHeroCardsLayout(width, height);
+    for (const card of cards) {
+      if (mx >= card.x && mx <= card.x + card.w && my >= card.y && my <= card.y + card.h) {
+        this.startMatchWithHero(card.key);
+        break;
+      }
+    }
+  }
+
+  startMatchWithHero(heroKey) {
+    this.selectedHeroKey = heroKey;
+    // Replace placeholder enemy and spawn real heroes
+    this.entities = this.entities.filter((e) => e.type !== 'hero');
+    this.hero = createHeroFromDef(heroKey, TEAM_RADIANT, this.map.radiantBase.x + 60, this.map.radiantBase.y - 60);
+    this.enemyHero = createHeroFromDef(this.enemyHeroKey, TEAM_DIRE, this.map.direBase.x - 60, this.map.direBase.y + 60);
+    this.entities.push(this.hero, this.enemyHero);
+    this.centerCameraOnHero();
+    this.state = 'playing';
+  }
+
+  drawHeroSelection(ctx) {
+    ctx.save();
+    ctx.resetTransform();
+    const { width, height } = ctx.canvas;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 28px system-ui, sans-serif';
+    const title = 'Выбор героя';
+    ctx.fillText(title, width / 2 - ctx.measureText(title).width / 2, 100);
+    const cards = this.getHeroCardsLayout(width, height);
+    for (const card of cards) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(card.x, card.y, card.w, card.h);
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      ctx.strokeRect(card.x, card.y, card.w, card.h);
+      ctx.fillStyle = card.color;
+      ctx.fillRect(card.x + 10, card.y + 10, 60, 60);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = 'bold 16px system-ui, sans-serif';
+      ctx.fillText(card.title, card.x + 84, card.y + 32);
+      ctx.font = '12px system-ui, sans-serif';
+      ctx.fillText('ЛКМ — выбрать', card.x + 84, card.y + 54);
+    }
+    ctx.restore();
+  }
+
+  getHeroCardsLayout(width, height) {
+    const defs = listHeroDefs();
+    const total = defs.length;
+    const cardW = 260, cardH = 90;
+    const gap = 16;
+    const totalW = total * cardW + (total - 1) * gap;
+    const startX = Math.max(16, Math.floor(width / 2 - totalW / 2));
+    const y = Math.floor(height / 2 - cardH / 2);
+    return defs.map((d, i) => ({ key: d.key, title: d.title, color: d.color, x: startX + i * (cardW + gap), y, w: cardW, h: cardH }));
   }
 
   drawGameOver(ctx) {

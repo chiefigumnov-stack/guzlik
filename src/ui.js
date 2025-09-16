@@ -10,19 +10,32 @@ export class UIOverlay {
     const pad = 10;
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(pad, pad, 260, 72);
+    ctx.fillRect(pad, pad, 420, 100);
     ctx.fillStyle = '#e2e8f0';
     ctx.font = '14px system-ui, sans-serif';
     ctx.fillText(`Время: ${formatTime(elapsedTimeSec)}`, pad + 10, pad + 22);
     ctx.fillText(`Золото: ${Math.floor(gold)}`, pad + 10, pad + 42);
-    ctx.fillText(`Герой HP ${Math.ceil(hero.hp)}/${hero.maxHp} | MP ${Math.ceil(hero.mana)}/${hero.maxMana}`, pad + 10, pad + 62);
+    ctx.fillText(`Ур. ${hero.level}  Опыт: ${Math.floor(hero.xp)}/${hero.xpToNextLevel()}  Очки умений: ${hero.skillPoints}`, pad + 10, pad + 62);
+    // XP bar
+    const xpRatio = Math.max(0, Math.min(1, hero.xp / hero.xpToNextLevel())) || 0;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(pad + 10, pad + 68, 220, 6);
+    ctx.fillStyle = '#60a5fa';
+    ctx.fillRect(pad + 10, pad + 68, 220 * xpRatio, 6);
+    ctx.fillText(`HP ${Math.ceil(hero.hp)}/${hero.maxHp} | MP ${Math.ceil(hero.mana)}/${hero.maxMana}`, pad + 10, pad + 82);
 
     // Abilities box (Q/E)
     const baseX = ctx.canvas.width / 2 - 100;
     const baseY = ctx.canvas.height - 90;
     const size = 64;
-    drawAbilityBox(ctx, baseX, baseY, size, 'Q', 'Огненный шар', hero.abilityQCooldownRemaining, hero.abilityQCooldown);
-    drawAbilityBox(ctx, baseX + 80, baseY, size, 'E', 'Лечение', hero.abilityECooldownRemaining, hero.abilityECooldown);
+    drawAbilityBox(ctx, baseX, baseY, size, 'Q', abilityTitle(this.game.hero, 'q'), hero.abilityQCooldownRemaining, hero.abilityQCooldown, hero.abilityLevelQ, this.game.hero.maxAbilityLevel, this.game.hero.skillPoints > 0 ? '1' : '');
+    drawAbilityBox(ctx, baseX + 80, baseY, size, 'E', abilityTitle(this.game.hero, 'e'), hero.abilityECooldownRemaining, hero.abilityECooldown, hero.abilityLevelE, this.game.hero.maxAbilityLevel, this.game.hero.skillPoints > 0 ? '1' : '');
+    // Upgrade hint
+    if (hero.skillPoints > 0) {
+      ctx.fillStyle = '#22c55e';
+      ctx.font = '12px system-ui, sans-serif';
+      ctx.fillText('Используйте 1/2 чтобы улучшать Q/E', baseX - 60, baseY - 10);
+    }
     ctx.restore();
   }
 
@@ -44,7 +57,7 @@ export class UIOverlay {
   }
 }
 
-function drawAbilityBox(ctx, x, y, size, keyLabel, title, remaining, total) {
+function drawAbilityBox(ctx, x, y, size, keyLabel, title, remaining, total, level = 1, maxLevel = 4, hint = '') {
   ctx.save();
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.fillRect(x, y, size, size);
@@ -56,6 +69,19 @@ function drawAbilityBox(ctx, x, y, size, keyLabel, title, remaining, total) {
   ctx.globalAlpha = 0.8;
   ctx.fillText(title, x + 6, y + size - 8);
   ctx.globalAlpha = 1;
+
+  // Level pips
+  const pipY = y + size - 22;
+  for (let i = 0; i < maxLevel; i++) {
+    ctx.fillStyle = i < level ? '#fde047' : 'rgba(255,255,255,0.15)';
+    ctx.fillRect(x + 6 + i * 10, pipY, 8, 4);
+  }
+
+  if (hint) {
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.fillText(`+${hint}`, x + size - 26, y + 16);
+  }
 
   if (remaining > 0 && total > 0) {
     const ratio = Math.max(0, Math.min(1, remaining / total));
@@ -72,5 +98,10 @@ function formatTime(totalSec) {
   const m = Math.floor(totalSec / 60);
   const s = Math.floor(totalSec % 60);
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function abilityTitle(hero, which) {
+  if (hero.abilityMeta && hero.abilityMeta[which]) return hero.abilityMeta[which].name;
+  return which === 'q' ? 'Огненный шар' : 'Лечение';
 }
 
