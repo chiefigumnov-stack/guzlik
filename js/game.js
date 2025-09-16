@@ -15,7 +15,7 @@ import { AbilitySystem, createDefaultAbilities, createAbilitiesForHero } from ".
 import { Network } from "./network.js";
 
 // Глобальные константы сцены
-const ARENA_SIZE = 50; // 50x50 метров
+const ARENA_SIZE = 120; // расширенная арена 120x120
 
 // Вспомогательная функция для загрузки текстуры с кросс-доменом
 function loadTexture(url) {

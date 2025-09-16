@@ -22,33 +22,34 @@ export class MobaWorld {
 
     // Параметры баз
     this.baseHp = { [Teams.Radiant]: 1000, [Teams.Dire]: 1000 };
+    const half = this.arenaSize/2 - 8;
     this.basePositions = {
-      [Teams.Radiant]: new THREE.Vector3(-22, 0, -22),
-      [Teams.Dire]: new THREE.Vector3(22, 0, 22),
+      [Teams.Radiant]: new THREE.Vector3(-half, 0, -half),
+      [Teams.Dire]: new THREE.Vector3(half, 0, half),
     };
 
     // Три линии: top, mid, bot (упрощённые точки)
     this.lanes = {
       mid: [
-        new THREE.Vector3(-22, 0, -22),
-        new THREE.Vector3(-10, 0, -10),
+        this.basePositions[Teams.Radiant].clone(),
+        new THREE.Vector3(-20, 0, -20),
         new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(10, 0, 10),
-        new THREE.Vector3(22, 0, 22),
+        new THREE.Vector3(20, 0, 20),
+        this.basePositions[Teams.Dire].clone(),
       ],
       top: [
-        new THREE.Vector3(-22, 0, 22),
-        new THREE.Vector3(-10, 0, 14),
-        new THREE.Vector3(0, 0, 10),
-        new THREE.Vector3(10, 0, 6),
-        new THREE.Vector3(22, 0, 2),
+        new THREE.Vector3(-half, 0, half),
+        new THREE.Vector3(-20, 0, 28),
+        new THREE.Vector3(0, 0, 20),
+        new THREE.Vector3(20, 0, 12),
+        new THREE.Vector3(half, 0, 8),
       ],
       bot: [
-        new THREE.Vector3(22, 0, -22),
-        new THREE.Vector3(10, 0, -14),
-        new THREE.Vector3(0, 0, -10),
-        new THREE.Vector3(-10, 0, -6),
-        new THREE.Vector3(-22, 0, -2),
+        new THREE.Vector3(half, 0, -half),
+        new THREE.Vector3(20, 0, -28),
+        new THREE.Vector3(0, 0, -20),
+        new THREE.Vector3(-20, 0, -12),
+        new THREE.Vector3(-half, 0, -8),
       ],
     };
 
