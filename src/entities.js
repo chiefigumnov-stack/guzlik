@@ -72,6 +72,7 @@ export class Projectile extends Entity {
     this.vy = params.vy || 0;
     this.sourceId = params.sourceId || null;
     this.homingTargetId = params.homingTargetId || null;
+    this.damageType = params.damageType || 'physical'; // 'physical' | 'magical'
   }
 
   update(dt, world) {
@@ -90,10 +91,20 @@ export class Projectile extends Entity {
       if (!this.isEnemy(e)) continue;
       const d = distance(this.x, this.y, e.x, e.y);
       if (d <= (this.radius + e.radius)) {
-        e.takeDamage(this.damage, this);
-        // mark last hit attribution
+        let dealt = this.damage;
+        if (this.damageType === 'magical') {
+          const mr = e.magicResist || 0;
+          dealt = this.damage * (1 - mr);
+        }
+        e.takeDamage(dealt, this);
+        // mark last hit attribution and lifesteal (physical only)
         const src = world.entities.find((x) => x.id === this.sourceId);
-        if (src) e._lastHitBy = src;
+        if (src) {
+          e._lastHitBy = src;
+          if (this.damageType === 'physical' && src.lifestealPercent) {
+            src.hp = Math.min(src.maxHp, src.hp + dealt * src.lifestealPercent);
+          }
+        }
         this.alive = false; break;
       }
     }
@@ -159,7 +170,7 @@ export class Unit extends Entity {
     const vx = Math.cos(ang) * 400; const vy = Math.sin(ang) * 400;
     const damageMult = this.damageBuffMultiplier || 1;
     const damage = Math.max(1, Math.floor((this.attackDamage || 0) * damageMult));
-    world.spawn(new Projectile({ team: this.team, x: this.x, y: this.y, vx, vy, speed: 400, damage, sourceId: this.id, lifetime: 2 }));
+    world.spawn(new Projectile({ team: this.team, x: this.x, y: this.y, vx, vy, speed: 400, damage, damageType: 'physical', sourceId: this.id, lifetime: 2 }));
   }
 }
 
@@ -178,9 +189,11 @@ export class Hero extends Unit {
     // Abilities (default; can be overridden by hero def)
     this.abilityQCost = 60; this.abilityQCooldown = 6; this.abilityQCooldownRemaining = 0; // fireball
     this.abilityECost = 50; this.abilityECooldown = 8; this.abilityECooldownRemaining = 0; // heal
+    this.abilityWCost = 40; this.abilityWCooldown = 11; this.abilityWCooldownRemaining = 0; // blink
+    this.abilityRCost = 120; this.abilityRCooldown = 60; this.abilityRCooldownRemaining = 0; // ultimate
     // Progression
     this.level = 1; this.xp = 0; this.skillPoints = 0;
-    this.abilityLevelQ = 1; this.abilityLevelE = 1; this.maxAbilityLevel = 4;
+    this.abilityLevelQ = 1; this.abilityLevelE = 1; this.abilityLevelW = 1; this.abilityLevelR = 1; this.maxAbilityLevel = 4;
     this.abilityMeta = null; // from hero def
     this.heroKey = 'default'; this.heroTitle = 'Герой'; this.themeColor = '#93c5fd';
     // Items/buffs
@@ -190,6 +203,8 @@ export class Hero extends Unit {
     this.buffHasteTimer = 0;
     this.buffRegenTimer = 0;
     this.buffDDTimer = 0;
+    this.magicResist = this.magicResist || 0;
+    this.lifestealPercent = this.lifestealPercent || 0;
     // Respawn
     this.respawnTimer = 0;
   }
@@ -208,6 +223,8 @@ export class Hero extends Unit {
     this.hp = Math.min(this.maxHp, this.hp + (this.hpRegen + extraHpRegen) * dt);
     if (this.abilityQCooldownRemaining > 0) this.abilityQCooldownRemaining -= dt;
     if (this.abilityECooldownRemaining > 0) this.abilityECooldownRemaining -= dt;
+    if (this.abilityWCooldownRemaining > 0) this.abilityWCooldownRemaining -= dt;
+    if (this.abilityRCooldownRemaining > 0) this.abilityRCooldownRemaining -= dt;
   }
 
   castQ(world, targetX, targetY) {
@@ -216,7 +233,7 @@ export class Hero extends Unit {
     const dir = normalize(targetX - this.x, targetY - this.y);
     const meta = this.abilityMeta ? this.abilityMeta.q : null;
     const damage = meta ? meta.damageBase + (this.abilityLevelQ - 1) * meta.damagePerLevel : 120;
-    world.spawn(new Projectile({ team: this.team, x: this.x, y: this.y, vx: dir.x * 520, vy: dir.y * 520, speed: 520, damage, sourceId: this.id, lifetime: 2.2 }));
+    world.spawn(new Projectile({ team: this.team, x: this.x, y: this.y, vx: dir.x * 520, vy: dir.y * 520, speed: 520, damage, damageType: 'magical', sourceId: this.id, lifetime: 2.2 }));
     return true;
   }
 
@@ -229,6 +246,37 @@ export class Hero extends Unit {
     return true;
   }
 
+  castW(world, targetX, targetY) {
+    if (this.abilityWCooldownRemaining > 0 || this.mana < this.abilityWCost) return false;
+    const meta = this.abilityMeta && this.abilityMeta.w ? this.abilityMeta.w : { range: 380 };
+    const maxRange = meta.range || 380;
+    const dx = targetX - this.x, dy = targetY - this.y; const dist = Math.hypot(dx, dy) || 1;
+    const jump = Math.min(dist, maxRange);
+    const dir = { x: dx / dist, y: dy / dist };
+    this.x += dir.x * jump; this.y += dir.y * jump;
+    this.mana -= this.abilityWCost; this.abilityWCooldownRemaining = this.abilityWCooldown;
+    return true;
+  }
+
+  castR(world, targetX, targetY) {
+    if (this.abilityRCooldownRemaining > 0 || this.mana < this.abilityRCost) return false;
+    const meta = this.abilityMeta && this.abilityMeta.r ? this.abilityMeta.r : { radius: 140, damageBase: 240, damagePerLevel: 60 };
+    const radius = meta.radius || 140;
+    const base = (meta.damageBase || 240) + (this.abilityLevelR - 1) * (meta.damagePerLevel || 0);
+    for (const e of world.entities) {
+      if (!e.alive || !this.isEnemy(e)) continue;
+      const d = Math.hypot(e.x - targetX, e.y - targetY);
+      if (d <= radius) {
+        const mr = e.magicResist || 0;
+        const dealt = base * (1 - mr);
+        e.takeDamage(dealt, { id: this.id, team: this.team, type: 'hero' });
+        e._lastHitBy = this;
+      }
+    }
+    this.mana -= this.abilityRCost; this.abilityRCooldownRemaining = this.abilityRCooldown;
+    return true;
+  }
+
   updateAbilityTuning() {
     if (!this.abilityMeta) return;
     const q = this.abilityMeta.q, e = this.abilityMeta.e;
@@ -236,6 +284,12 @@ export class Hero extends Unit {
     this.abilityQCost = q.cost;
     this.abilityECooldown = Math.max(2, e.cooldownBase + (this.abilityLevelE - 1) * (e.cooldownGain || 0));
     this.abilityECost = e.cost;
+    if (this.abilityMeta.w) {
+      const w = this.abilityMeta.w; this.abilityWCooldown = Math.max(3, (w.cooldownBase || 11) + (this.abilityLevelW - 1) * (w.cooldownGain || 0)); this.abilityWCost = w.cost || 40;
+    }
+    if (this.abilityMeta.r) {
+      const r = this.abilityMeta.r; this.abilityRCooldown = Math.max(8, (r.cooldownBase || 60) + (this.abilityLevelR - 1) * (r.cooldownGain || 0)); this.abilityRCost = r.cost || 120;
+    }
   }
 
   grantXP(amount) {
@@ -257,6 +311,8 @@ export class Hero extends Unit {
     if (this.skillPoints <= 0) return false;
     if (which === 'q' && this.abilityLevelQ < this.maxAbilityLevel) { this.abilityLevelQ++; this.skillPoints--; this.updateAbilityTuning(); return true; }
     if (which === 'e' && this.abilityLevelE < this.maxAbilityLevel) { this.abilityLevelE++; this.skillPoints--; this.updateAbilityTuning(); return true; }
+    if (which === 'w' && this.abilityLevelW < this.maxAbilityLevel) { this.abilityLevelW++; this.skillPoints--; this.updateAbilityTuning(); return true; }
+    if (which === 'r' && this.abilityLevelR < this.maxAbilityLevel) { this.abilityLevelR++; this.skillPoints--; this.updateAbilityTuning(); return true; }
     return false;
   }
 }
@@ -267,11 +323,11 @@ export class Creep extends Unit {
     this.speed = params.speed || 90;
     this.attackRange = params.attackRange || 45;
     this.attackCooldown = params.attackCooldown || 1.0;
-    this.attackDamage = params.attackDamage || 14;
+    this.attackDamage = params.attackDamage || 16;
     this.radius = params.radius || 10;
     this.path = params.path || [];
     this.pathIndex = 0;
-    this.goldBounty = params.goldBounty || 40;
+    this.goldBounty = params.goldBounty || 45;
   }
 
   update(dt, world) {
@@ -298,9 +354,9 @@ export class Building extends Entity {
 export class Tower extends Building {
   constructor(params) {
     super({ ...params, type: 'tower' });
-    this.attackRange = params.attackRange || 220;
-    this.attackCooldown = params.attackCooldown || 1.0;
-    this.attackDamage = params.attackDamage || 24;
+    this.attackRange = params.attackRange || 230;
+    this.attackCooldown = params.attackCooldown || 0.9;
+    this.attackDamage = params.attackDamage || 26;
   }
 
   update(dt, world) {

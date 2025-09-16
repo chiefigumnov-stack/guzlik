@@ -28,17 +28,19 @@ export class UIOverlay {
       ctx.fillText(`Возрождение через: ${Math.ceil(hero.respawnTimer || 0)}с`, pad + 200, pad + 22);
     }
 
-    // Abilities box (Q/E)
-    const baseX = ctx.canvas.width / 2 - 100;
+    // Abilities box (Q/W/E/R)
+    const baseX = ctx.canvas.width / 2 - 160;
     const baseY = ctx.canvas.height - 90;
     const size = 64;
-    drawAbilityBox(ctx, baseX, baseY, size, 'Q', abilityTitle(this.game.hero, 'q'), hero.abilityQCooldownRemaining, hero.abilityQCooldown, hero.abilityLevelQ, this.game.hero.maxAbilityLevel, this.game.hero.skillPoints > 0 ? '1' : '');
-    drawAbilityBox(ctx, baseX + 80, baseY, size, 'E', abilityTitle(this.game.hero, 'e'), hero.abilityECooldownRemaining, hero.abilityECooldown, hero.abilityLevelE, this.game.hero.maxAbilityLevel, this.game.hero.skillPoints > 0 ? '1' : '');
+    drawAbilityBox(ctx, baseX, baseY, size, 'Q', abilityTitle(this.game.hero, 'q'), hero.abilityQCooldownRemaining, hero.abilityQCooldown, hero.abilityLevelQ, this.game.hero.maxAbilityLevel, hero.skillPoints > 0 ? '1' : '');
+    drawAbilityBox(ctx, baseX + 80, baseY, size, 'W', abilityTitle(this.game.hero, 'w'), hero.abilityWCooldownRemaining || 0, hero.abilityWCooldown || 0, hero.abilityLevelW || 1, hero.maxAbilityLevel || 4, hero.skillPoints > 0 ? '1' : '');
+    drawAbilityBox(ctx, baseX + 160, baseY, size, 'E', abilityTitle(this.game.hero, 'e'), hero.abilityECooldownRemaining, hero.abilityECooldown, hero.abilityLevelE, hero.maxAbilityLevel, hero.skillPoints > 0 ? '1' : '');
+    drawAbilityBox(ctx, baseX + 240, baseY, size, 'R', abilityTitle(this.game.hero, 'r'), hero.abilityRCooldownRemaining || 0, hero.abilityRCooldown || 0, hero.abilityLevelR || 1, hero.maxAbilityLevel || 4, hero.skillPoints > 0 ? '1' : '');
     // Upgrade hint
     if (hero.skillPoints > 0) {
       ctx.fillStyle = '#22c55e';
       ctx.font = '12px system-ui, sans-serif';
-      ctx.fillText('Используйте 1/2 чтобы улучшать Q/E', baseX - 60, baseY - 10);
+      ctx.fillText('Используйте 1/2/9/0 чтобы улучшать Q/E/W/R', baseX - 60, baseY - 10);
     }
 
     // Inventory (6 slots): keys 3-8 to use

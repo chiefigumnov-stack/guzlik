@@ -130,15 +130,25 @@ export class Game {
       const world = this.screenToWorld(this.input.mouseScreenX, this.input.mouseScreenY);
       this.hero.castQ(this, world.x, world.y);
     }
+    if (this.input.isKeyDown('w')) {
+      const world = this.screenToWorld(this.input.mouseScreenX, this.input.mouseScreenY);
+      this.hero.castW(this, world.x, world.y);
+    }
     if (this.input.isKeyDown('e')) {
       this.hero.castE(this);
+    }
+    if (this.input.isKeyDown('r')) {
+      const world = this.screenToWorld(this.input.mouseScreenX, this.input.mouseScreenY);
+      this.hero.castR(this, world.x, world.y);
     }
     // Upgrade keys 1/2
     if (this.input.isKeyDown('1')) { this.hero.tryUpgradeAbility('q'); }
     if (this.input.isKeyDown('2')) { this.hero.tryUpgradeAbility('e'); }
+    if (this.input.isKeyDown('9')) { this.hero.tryUpgradeAbility('w'); }
+    if (this.input.isKeyDown('0')) { this.hero.tryUpgradeAbility('r'); }
     if (this.input.isKeyDown('p')) this.paused = true;
     if (this.input.isKeyDown('o')) this.paused = false;
-    if (this.input.isKeyDown('r')) this.reset();
+    if (this.input.isKeyDown('k')) this.reset();
 
     this.camera.updateFromInput(this.input, this._dtFixed);
 
@@ -321,13 +331,15 @@ export class Game {
     const nearShop = canUseShop(this);
     const pad = 10;
     ctx.fillStyle = nearShop ? 'rgba(16,185,129,0.15)' : 'rgba(0,0,0,0.25)';
-    const w = 320, h = 116; const x = pad, y = ctx.canvas.height - h - pad;
+    const items = Object.values(ITEMS);
+    const cols = items.length;
+    const w = Math.max(320, 20 + cols * 76);
+    const h = 116; const x = pad, y = ctx.canvas.height - h - pad;
     ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.strokeRect(x, y, w, h);
     ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 14px system-ui, sans-serif';
     ctx.fillText(nearShop ? 'Магазин (у базы)' : 'Магазин (слишком далеко)', x + 10, y + 22);
     ctx.font = '12px system-ui, sans-serif';
-    const items = Object.values(ITEMS);
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       const bx = x + 10 + i * 76; const by = y + 30; const bw = 72; const bh = 70;
