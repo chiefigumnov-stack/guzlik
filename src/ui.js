@@ -36,6 +36,17 @@ export class UIOverlay {
       ctx.font = '12px system-ui, sans-serif';
       ctx.fillText('Используйте 1/2 чтобы улучшать Q/E', baseX - 60, baseY - 10);
     }
+
+    // Inventory (6 slots): keys 3-8 to use
+    const invX = ctx.canvas.width - 12 - (6 * 42);
+    const invY = ctx.canvas.height - 90;
+    for (let i = 0; i < 6; i++) {
+      const x = invX + i * 42;
+      drawItemSlot(ctx, x, invY, 40, this.game.hero.inventory[i], i);
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.fillText('3 4 5 6 7 8 — использовать', invX, invY - 6);
     ctx.restore();
   }
 
@@ -116,5 +127,21 @@ function formatTime(totalSec) {
 function abilityTitle(hero, which) {
   if (hero.abilityMeta && hero.abilityMeta[which]) return hero.abilityMeta[which].name;
   return which === 'q' ? 'Огненный шар' : 'Лечение';
+}
+
+function drawItemSlot(ctx, x, y, size, slot, index) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(x, y, size, size);
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.strokeRect(x, y, size, size);
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '10px system-ui, sans-serif';
+  ctx.fillText(String(index + 3), x + 4, y + 12);
+  if (slot) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(x + 10, y + 10, size - 20, size - 20);
+  }
+  ctx.restore();
 }
 

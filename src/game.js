@@ -4,6 +4,7 @@ import { UIOverlay } from './ui.js';
 import { GameMap } from './map.js';
 import { Hero, Creep, Tower, Building, Projectile, TEAM_RADIANT, TEAM_DIRE } from './entities.js';
 import { createHeroFromDef, listHeroDefs } from './heroes.js';
+import { buyItem, useItem, canUseShop, ITEMS } from './items.js';
 import { clamp } from './utils.js';
 
 export class Game {
@@ -81,6 +82,7 @@ export class Game {
     const clicks = this.input.consumeClicks();
     if (this.state === 'hero-select') {
       if (clicks.left) this.handleHeroSelectClick();
+      // Shop clicks during selection are ignored
       return;
     }
     // Right click: context order (attack-move or attack target if enemy under cursor)
@@ -103,6 +105,23 @@ export class Game {
         this.hero.setMoveTarget(world.x, world.y);
       }
     }
+    // Left-click on shop items to buy when near base
+    if (clicks.left && this.state === 'playing') {
+      const mx = this.input.mouseScreenX, my = this.input.mouseScreenY;
+      const pad = 10; const w = 320, h = 116; const x = pad, y = this.canvas.height - h - pad;
+      if (mx >= x && mx <= x + w && my >= y && my <= y + h) {
+        if (canUseShop(this)) {
+          const items = Object.values(ITEMS);
+          for (let i = 0; i < items.length; i++) {
+            const bx = x + 10 + i * 76; const by = y + 30; const bw = 72; const bh = 70;
+            if (mx >= bx && mx <= bx + bw && my >= by && my <= by + bh) {
+              buyItem(this, items[i].key);
+              break;
+            }
+          }
+        }
+      }
+    }
     // Q/E abilities
     if (this.input.isKeyDown('q')) {
       const world = this.screenToWorld(this.input.mouseScreenX, this.input.mouseScreenY);
@@ -119,6 +138,14 @@ export class Game {
     if (this.input.isKeyDown('r')) this.reset();
 
     this.camera.updateFromInput(this.input, this._dtFixed);
+
+    // Item use keys 3-8
+    if (this.input.isKeyDown('3')) useItem(this, 0);
+    if (this.input.isKeyDown('4')) useItem(this, 1);
+    if (this.input.isKeyDown('5')) useItem(this, 2);
+    if (this.input.isKeyDown('6')) useItem(this, 3);
+    if (this.input.isKeyDown('7')) useItem(this, 4);
+    if (this.input.isKeyDown('8')) useItem(this, 5);
   }
 
   reset() {
@@ -219,8 +246,35 @@ export class Game {
     this.ui.drawWorldBars(ctx, this.camera);
     if (this.state === 'hero-select') this.drawHeroSelection(ctx);
     else this.ui.drawHUD(ctx);
+    if (this.state === 'playing') this.drawShop(ctx);
 
     if (this.gameOver) this.drawGameOver(ctx);
+  }
+
+  drawShop(ctx) {
+    ctx.save();
+    ctx.resetTransform();
+    const nearShop = canUseShop(this);
+    const pad = 10;
+    ctx.fillStyle = nearShop ? 'rgba(16,185,129,0.15)' : 'rgba(0,0,0,0.25)';
+    const w = 320, h = 116; const x = pad, y = ctx.canvas.height - h - pad;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 14px system-ui, sans-serif';
+    ctx.fillText(nearShop ? 'Магазин (у базы)' : 'Магазин (слишком далеко)', x + 10, y + 22);
+    ctx.font = '12px system-ui, sans-serif';
+    const items = Object.values(ITEMS);
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const bx = x + 10 + i * 76; const by = y + 30; const bw = 72; const bh = 70;
+      ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.strokeRect(bx, by, bw, bh);
+      ctx.fillStyle = '#94a3b8'; ctx.fillRect(bx + 8, by + 8, bw - 16, 28);
+      ctx.fillStyle = '#e2e8f0'; ctx.font = '11px system-ui, sans-serif';
+      ctx.fillText(it.name, bx + 6, by + 50);
+      ctx.fillText(`${it.cost}g`, bx + 6, by + 64);
+    }
+    ctx.restore();
   }
 
   handleHeroSelectClick() {
@@ -241,6 +295,7 @@ export class Game {
     // Replace placeholder enemy and spawn real heroes
     this.entities = this.entities.filter((e) => e.type !== 'hero');
     this.hero = createHeroFromDef(heroKey, TEAM_RADIANT, this.map.radiantBase.x + 60, this.map.radiantBase.y - 60);
+    this.hero.inventory = Array(6).fill(null);
     this.enemyHero = createHeroFromDef(this.enemyHeroKey, TEAM_DIRE, this.map.direBase.x - 60, this.map.direBase.y + 60);
     this.entities.push(this.hero, this.enemyHero);
     this.centerCameraOnHero();

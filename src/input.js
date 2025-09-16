@@ -63,6 +63,8 @@ export class InputManager {
       this.rightDown = true;
       this.rightClicked = true;
     }
+    // Focus canvas to ensure key presses are captured
+    if (document.activeElement !== this.canvas) this.canvas.focus();
   }
 
   onMouseUp(e) {
