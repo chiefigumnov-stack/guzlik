@@ -26,8 +26,8 @@ export const HERO_DEFS = {
     age: 34,
     portrait: "https://i.ibb.co/bRGgWW1f/antuan.jpg",
     usePortraitBillboard: false,
-    // Ссылка на вашу модель (Google Drive direct download)
-    modelUrl: "https://drive.google.com/uc?export=download&id=1KUn26LQSGy-5TLEnynNKuYWTkB1j1nTn",
+    // Локальный путь для офлайн-режима (положите файл в assets/antuan.glb)
+    modelUrl: "./assets/antuan.glb",
     basicType: "melee",
     base: {
       maxHp: 650,
