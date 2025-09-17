@@ -53,6 +53,16 @@ export class UIOverlay {
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.font = '11px system-ui, sans-serif';
     ctx.fillText('3 4 5 6 7 8 — использовать', invX, invY - 6);
+
+    // Crosshair for 3D aim
+    if (this.game.mode3p) {
+      ctx.strokeStyle = 'rgba(226,232,240,0.8)';
+      ctx.beginPath();
+      const cx = ctx.canvas.width / 2, cy = ctx.canvas.height / 2;
+      ctx.moveTo(cx - 8, cy); ctx.lineTo(cx + 8, cy);
+      ctx.moveTo(cx, cy - 8); ctx.lineTo(cx, cy + 8);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 

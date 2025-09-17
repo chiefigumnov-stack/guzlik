@@ -123,7 +123,7 @@ export class Game {
       }
     }
     // Right click: context order (attack-move or attack target if enemy under cursor)
-    if (clicks.right) {
+    if (clicks.right && !this.mode3p) {
       const world = this.screenToWorld(this.input.mouseScreenX, this.input.mouseScreenY);
       // Find topmost entity under cursor
       let clicked = null; let bestDist = Infinity;
@@ -161,8 +161,15 @@ export class Game {
     }
     // Q/E abilities
     if (this.input.isKeyDown('q')) {
-      const world = this.screenToWorld(this.input.mouseScreenX, this.input.mouseScreenY);
-      this.hero.castQ(this, world.x, world.y);
+      if (this.mode3p) {
+        const yaw = this._cameraYaw || 0;
+        const tx = this.hero.x + Math.cos(yaw) * 999;
+        const ty = this.hero.y + Math.sin(yaw) * 999;
+        this.hero.castQ(this, tx, ty);
+      } else {
+        const world = this.screenToWorld(this.input.mouseScreenX, this.input.mouseScreenY);
+        this.hero.castQ(this, world.x, world.y);
+      }
     }
     if (this.input.isKeyDown('w')) {
       const world = this.screenToWorld(this.input.mouseScreenX, this.input.mouseScreenY);
@@ -172,8 +179,15 @@ export class Game {
       this.hero.castE(this);
     }
     if (this.input.isKeyDown('r')) {
-      const world = this.screenToWorld(this.input.mouseScreenX, this.input.mouseScreenY);
-      this.hero.castR(this, world.x, world.y);
+      if (this.mode3p) {
+        const yaw = this._cameraYaw || 0;
+        const tx = this.hero.x + Math.cos(yaw) * 120;
+        const ty = this.hero.y + Math.sin(yaw) * 120;
+        this.hero.castR(this, tx, ty);
+      } else {
+        const world = this.screenToWorld(this.input.mouseScreenX, this.input.mouseScreenY);
+        this.hero.castR(this, world.x, world.y);
+      }
     }
     // Upgrade keys 1/2
     if (this.input.isKeyDown('1')) { this.hero.tryUpgradeAbility('q'); }

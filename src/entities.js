@@ -120,6 +120,7 @@ export class Unit extends Entity {
     this.attackOrderTargetId = null; // explicit attack order target
     this.attackMovePointX = null;
     this.attackMovePointY = null;
+    this.facing = 0;
   }
 
   setMoveTarget(x, y) { this.moveTargetX = x; this.moveTargetY = y; }
@@ -136,6 +137,7 @@ export class Unit extends Entity {
       const effectiveSpeed = (this.speed + (this.speedBonus || 0) + (this.speedBonusBuff || 0));
       const step = effectiveSpeed * dt;
       if (step < dist) { this.x += dir.x * step; this.y += dir.y * step; } else { this.x = this.moveTargetX; this.y = this.moveTargetY; }
+      this.facing = Math.atan2(dir.y, dir.x);
     }
     // Target selection: prefer explicit attack order target
     let target = null;

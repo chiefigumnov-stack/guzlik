@@ -23,12 +23,13 @@ function init() {
     game.handleResize();
     renderer3d.resize();
   });
-  // Pointer lock for smooth yaw
-  webglCanvas.addEventListener('click', () => {
-    if (document.pointerLockElement !== webglCanvas) webglCanvas.requestPointerLock();
+  // Pointer lock for smooth yaw (attach to top HUD canvas)
+  const topCanvas = canvas;
+  topCanvas.addEventListener('click', () => {
+    if (document.pointerLockElement !== topCanvas) topCanvas.requestPointerLock();
   });
   document.addEventListener('pointerlockchange', () => {
-    if (document.pointerLockElement === webglCanvas) {
+    if (document.pointerLockElement === topCanvas) {
       window.addEventListener('mousemove', onLockedMove);
     } else {
       window.removeEventListener('mousemove', onLockedMove);
