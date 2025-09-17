@@ -271,6 +271,21 @@ export class Game {
 
     // Update entities and collect dead
     for (const e of this.entities) e.update(dt, this);
+    // Basic collision against buildings/towers
+    for (const mover of this.entities) {
+      if (!mover.alive || (mover.type !== 'hero' && mover.type !== 'creep' && mover.type !== 'unit')) continue;
+      for (const stat of this.entities) {
+        if (!stat.alive || (stat.type !== 'building' && stat.type !== 'tower')) continue;
+        const dx = mover.x - stat.x, dy = mover.y - stat.y;
+        const r = (mover.radius || 10) + (stat.radius || 24) + 2;
+        const d = Math.hypot(dx, dy);
+        if (d > 0 && d < r) {
+          const push = (r - d) + 0.5;
+          mover.x += (dx / d) * push;
+          mover.y += (dy / d) * push;
+        }
+      }
+    }
     // Check rune pickups
     for (const r of this.runes) {
       if (!r.alive) continue;

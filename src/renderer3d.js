@@ -32,6 +32,7 @@ export class Renderer3D {
     this.tempVec3 = new THREE.Vector3();
     this.mapGroup = null;
     this.mapBuiltKey = '';
+    this.modelKeys = { hero: '/assets/hero.glb', creep: '/assets/creep.glb', tower: '/assets/tower.glb', projectile: '/assets/projectile.glb' };
   }
 
   async loadGLTF(key, url) {
@@ -166,10 +167,11 @@ export class Renderer3D {
         this.entityIdToObject.set(e.id, obj);
         this.scene.add(obj);
         // Try upgrade to GLTF for heroes asynchronously
-        if (e.type === 'hero') {
-          this.loadGLTF('hero', '/assets/hero.glb').then((root) => {
+        const mk = (e.type === 'hero') ? 'hero' : (e.type === 'creep') ? 'creep' : (e.type === 'tower') ? 'tower' : (e.type === 'projectile') ? 'projectile' : '';
+        if (mk && this.modelKeys[mk]) {
+          this.loadGLTF(mk, this.modelKeys[mk]).then((root) => {
             const replacement = root.clone(true);
-            replacement.scale.setScalar(0.8);
+            replacement.scale.setScalar(e.type === 'tower' ? 1.2 : e.type === 'projectile' ? 0.2 : 0.8);
             this.scene.add(replacement);
             this.scene.remove(obj);
             this.entityIdToObject.set(e.id, replacement);

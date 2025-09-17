@@ -67,6 +67,7 @@ export class UIOverlay {
   }
 
   drawWorldBars(ctx, camera) {
+    if (this.game.mode3p) return; // 3D режим: полоски здоровья поверх мира не рисуем
     const drawBar = (x, y, w, h, ratio, color) => {
       ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x, y, w, h);
       ctx.fillStyle = color; ctx.fillRect(x, y, w * Math.max(0, Math.min(1, ratio)), h);
