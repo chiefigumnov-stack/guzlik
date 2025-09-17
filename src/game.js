@@ -111,7 +111,7 @@ export class Game {
     // Left-click on shop items to buy when near base
     if (clicks.left && this.state === 'playing') {
       const mx = this.input.mouseScreenX, my = this.input.mouseScreenY;
-      const pad = 10; const w = 320, h = 116; const x = pad, y = this.canvas.height - h - pad;
+      const pad = 10; const items = Object.values(ITEMS); const cols = items.length; const w = Math.max(320, 20 + cols * 76), h = 116; const x = pad, y = this.canvas.height - h - pad;
       if (mx >= x && mx <= x + w && my >= y && my <= y + h) {
         if (canUseShop(this)) {
           const items = Object.values(ITEMS);
