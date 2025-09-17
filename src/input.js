@@ -9,6 +9,10 @@ export class InputManager {
     this.leftClicked = false;
     this.rightClicked = false;
     this.scrollDelta = 0;
+    this.lastMouseX = 0;
+    this.lastMouseY = 0;
+    this.mouseDeltaX = 0;
+    this.mouseDeltaY = 0;
 
     this._boundContextMenu = (e) => e.preventDefault();
     this._boundKeyDown = (e) => this.onKeyDown(e);
@@ -51,8 +55,12 @@ export class InputManager {
 
   onMouseMove(e) {
     const rect = this.canvas.getBoundingClientRect();
-    this.mouseScreenX = (e.clientX - rect.left) * (this.canvas.width / rect.width);
-    this.mouseScreenY = (e.clientY - rect.top) * (this.canvas.height / rect.height);
+    const newX = (e.clientX - rect.left) * (this.canvas.width / rect.width);
+    const newY = (e.clientY - rect.top) * (this.canvas.height / rect.height);
+    this.mouseDeltaX += newX - this.mouseScreenX;
+    this.mouseDeltaY += newY - this.mouseScreenY;
+    this.mouseScreenX = newX;
+    this.mouseScreenY = newY;
   }
 
   onMouseDown(e) {
@@ -85,6 +93,12 @@ export class InputManager {
 
   isKeyDown(code) {
     return this.keysDown.has(code.toLowerCase());
+  }
+
+  consumeMouseDelta() {
+    const dx = this.mouseDeltaX; const dy = this.mouseDeltaY;
+    this.mouseDeltaX = 0; this.mouseDeltaY = 0;
+    return { dx, dy };
   }
 }
 

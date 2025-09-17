@@ -15,6 +15,7 @@ export class Game {
     this.camera = new Camera();
     this.ui = new UIOverlay(this);
     this.map = new GameMap();
+    this.mode3p = true; // third-person control
 
     this.entities = [];
     this.toSpawn = [];
@@ -87,6 +88,39 @@ export class Game {
       if (clicks.left) this.handleHeroSelectClick();
       // Shop clicks during selection are ignored
       return;
+    }
+    // Third-person WASD movement overrides right-click moving
+    if (this.mode3p && this.hero && this.hero.alive) {
+      const forward = this.input.isKeyDown('w');
+      const back = this.input.isKeyDown('s');
+      const left = this.input.isKeyDown('a');
+      const right = this.input.isKeyDown('d');
+      if (forward || back || left || right) {
+        const angle = (this._cameraYaw || 0);
+        const vx = Math.cos(angle);
+        const vz = Math.sin(angle);
+        // Right vector
+        const rx = Math.cos(angle + Math.PI / 2);
+        const rz = Math.sin(angle + Math.PI / 2);
+        let mx = 0, my = 0;
+        if (forward) { mx += vx; my += vz; }
+        if (back) { mx -= vx; my -= vz; }
+        if (left) { mx -= rx; my -= rz; }
+        if (right) { mx += rx; my += rz; }
+        const len = Math.hypot(mx, my) || 1; mx /= len; my /= len;
+        const speed = (this.hero.speed + (this.hero.speedBonus || 0) + (this.hero.speedBonusBuff || 0));
+        this.hero.x += mx * speed * this._dtFixed;
+        this.hero.y += my * speed * this._dtFixed;
+        // Face toward movement
+        this.hero.facing = Math.atan2(my, mx);
+        // keep camera centered
+        this.camera.x = this.hero.x; this.camera.y = this.hero.y;
+      }
+      // Mouse move rotates camera yaw
+      const m = this.input.consumeMouseDelta();
+      if (m.dx !== 0) {
+        this._cameraYaw = (this._cameraYaw || 0) + m.dx * 0.003;
+      }
     }
     // Right click: context order (attack-move or attack target if enemy under cursor)
     if (clicks.right) {

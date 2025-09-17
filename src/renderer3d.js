@@ -52,11 +52,12 @@ export class Renderer3D {
   }
 
   updateCameraFromGame(game) {
-    // Map 2D world coords to 3D plane (x -> x, y -> z) and keep an angled camera
     const focus = { x: game.camera.x, z: game.camera.y };
-    this.camera.position.x = focus.x + 320;
-    this.camera.position.z = focus.z + 420;
-    this.camera.position.y = 360;
+    const yaw = game._cameraYaw || -Math.PI / 4;
+    const dist = 420; const height = 360;
+    this.camera.position.x = focus.x + Math.cos(yaw) * dist;
+    this.camera.position.z = focus.z + Math.sin(yaw) * dist;
+    this.camera.position.y = height;
     this.camera.lookAt(focus.x, 0, focus.z);
     this.camera.updateProjectionMatrix();
   }
