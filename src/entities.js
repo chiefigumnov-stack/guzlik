@@ -121,6 +121,7 @@ export class Unit extends Entity {
     this.attackMovePointX = null;
     this.attackMovePointY = null;
     this.facing = 0;
+    this.manualControl = false;
   }
 
   setMoveTarget(x, y) { this.moveTargetX = x; this.moveTargetY = y; }
@@ -154,13 +155,16 @@ export class Unit extends Entity {
 
     if (target) {
       const dTo = Math.hypot(target.x - this.x, target.y - this.y);
-      if (dTo > this.attackRange - 4) {
-        // Chase until in range
-        this.setMoveTarget(target.x, target.y);
-      } else {
-        // In range: do not override movement intention; keep moving
+      if (!this.manualControl) {
+        if (dTo > this.attackRange - 4) {
+          // Chase until in range
+          this.setMoveTarget(target.x, target.y);
+        } else {
+          // Stop to attack
+          this.setMoveTarget(this.x, this.y);
+        }
       }
-      if (this.attackCooldownRemaining <= 0) {
+      if (dTo <= this.attackRange + 0.5 && this.attackCooldownRemaining <= 0) {
         this.performAttack(target, world);
       }
     }

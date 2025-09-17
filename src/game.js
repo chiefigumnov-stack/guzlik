@@ -95,7 +95,9 @@ export class Game {
       const back = this.input.isKeyDown('s');
       const left = this.input.isKeyDown('a');
       const right = this.input.isKeyDown('d');
-      if (forward || back || left || right) {
+      const moving = (forward || back || left || right);
+      this.hero.manualControl = moving;
+      if (moving) {
         const angle = (this._cameraYaw || 0);
         const vx = Math.cos(angle);
         const vz = Math.sin(angle);
@@ -115,6 +117,9 @@ export class Game {
         this.hero.facing = Math.atan2(my, mx);
         // keep camera centered
         this.camera.x = this.hero.x; this.camera.y = this.hero.y;
+      } else {
+        // Not moving via WASD; release manual control
+        this.hero.manualControl = false;
       }
       // Mouse move rotates camera yaw
       const m = this.input.consumeMouseDelta();
