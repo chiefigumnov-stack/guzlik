@@ -176,9 +176,16 @@ export class Game {
         this.hero.castQ(this, world.x, world.y);
       }
     }
-    if (this.input.isKeyDown('w')) {
-      const world = this.screenToWorld(this.input.mouseScreenX, this.input.mouseScreenY);
-      this.hero.castW(this, world.x, world.y);
+    if (this.input.isKeyDown('f')) {
+      if (this.mode3p) {
+        const yaw = this._cameraYaw || 0;
+        const tx = this.hero.x + Math.cos(yaw) * 300;
+        const ty = this.hero.y + Math.sin(yaw) * 300;
+        this.hero.castW(this, tx, ty);
+      } else {
+        const world = this.screenToWorld(this.input.mouseScreenX, this.input.mouseScreenY);
+        this.hero.castW(this, world.x, world.y);
+      }
     }
     if (this.input.isKeyDown('e')) {
       this.hero.castE(this);
@@ -274,6 +281,7 @@ export class Game {
     // Basic collision against buildings/towers
     for (const mover of this.entities) {
       if (!mover.alive || (mover.type !== 'hero' && mover.type !== 'creep' && mover.type !== 'unit')) continue;
+      if (mover.type === 'hero' && mover.spawnGraceTime > 0) continue;
       for (const stat of this.entities) {
         if (!stat.alive || (stat.type !== 'building' && stat.type !== 'tower')) continue;
         const dx = mover.x - stat.x, dy = mover.y - stat.y;

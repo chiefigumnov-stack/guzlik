@@ -213,11 +213,13 @@ export class Hero extends Unit {
     this.lifestealPercent = this.lifestealPercent || 0;
     // Respawn
     this.respawnTimer = 0;
+    this.spawnGraceTime = 2; // seconds, ignore collisions briefly after spawn
   }
 
   update(dt, world) {
     super.update(dt, world);
     if (!this.alive) return;
+    if (this.spawnGraceTime > 0) this.spawnGraceTime -= dt;
     // Buff timers and effects
     if (this.buffHasteTimer > 0) { this.buffHasteTimer -= dt; if (this.buffHasteTimer <= 0) { this.speedBonusBuff = 0; } }
     if (this.buffRegenTimer > 0) { this.buffRegenTimer -= dt; }

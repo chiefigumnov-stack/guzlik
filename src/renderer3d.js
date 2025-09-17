@@ -14,14 +14,16 @@ export class Renderer3D {
     this.resize();
 
     // Lights
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x223344, 0.7);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x223344, 0.9);
     this.scene.add(hemi);
-    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
     dir.position.set(300, 400, 200);
     this.scene.add(dir);
+    const amb = new THREE.AmbientLight(0xffffff, 0.25);
+    this.scene.add(amb);
 
     // Ground
-    this.ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshStandardMaterial({ color: 0x0f1b2b }));
+    this.ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshStandardMaterial({ color: 0x1a2636 }));
     this.ground.rotation.x = -Math.PI / 2;
     this.scene.add(this.ground);
 
@@ -95,8 +97,8 @@ export class Renderer3D {
     this.ground.geometry.dispose();
     this.ground.geometry = new THREE.PlaneGeometry(map.width, map.height);
     // Lane segments
-    const laneWidth = 40;
-    const laneMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, metalness: 0.0, roughness: 1.0 });
+    const laneWidth = 60;
+    const laneMat = new THREE.MeshStandardMaterial({ color: 0x3a9e3a, metalness: 0.0, roughness: 1.0 });
     for (let i = 1; i < map.path.length; i++) {
       const a = map.path[i - 1];
       const b = map.path[i];
@@ -104,12 +106,10 @@ export class Renderer3D {
       const len = Math.hypot(dx, dz);
       if (len < 1) continue;
       const midx = (a.x + b.x) / 2; const midz = (a.y + b.y) / 2;
-      const seg = new THREE.Mesh(new THREE.PlaneGeometry(len, laneWidth), laneMat);
-      seg.rotation.x = -Math.PI / 2;
-      seg.position.set(midx, 0.1, midz);
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(len, 2, laneWidth), laneMat);
+      seg.position.set(midx, 1, midz);
       const yaw = Math.atan2(dz, dx);
-      seg.rotation.z = 0;
-      seg.rotation.y = yaw; // align along segment
+      seg.rotation.y = yaw;
       group.add(seg);
     }
     // Bases markers
