@@ -21,15 +21,17 @@ export class Renderer3D {
     this.scene.add(dir);
 
     // Ground
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshStandardMaterial({ color: 0x0f1b2b }));
-    ground.rotation.x = -Math.PI / 2;
-    this.scene.add(ground);
+    this.ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshStandardMaterial({ color: 0x0f1b2b }));
+    this.ground.rotation.x = -Math.PI / 2;
+    this.scene.add(this.ground);
 
     this.loader = new GLTFLoader();
     this.models = new Map();
     this.spawned = [];
     this.entityIdToObject = new Map();
     this.tempVec3 = new THREE.Vector3();
+    this.mapGroup = null;
+    this.mapBuiltKey = '';
   }
 
   async loadGLTF(key, url) {
@@ -73,8 +75,84 @@ export class Renderer3D {
 
   draw(game) {
     this.updateCameraFromGame(game);
+    this.ensureMapBuilt(game);
     this.updateEntities(game);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  ensureMapBuilt(game) {
+    const key = `${game.map.width}x${game.map.height}:${game.map.path.map(p=>p.x+'_'+p.y).join('|')}`;
+    if (key === this.mapBuiltKey) return;
+    this.buildMap(game.map);
+    this.mapBuiltKey = key;
+  }
+
+  buildMap(map) {
+    if (this.mapGroup) { this.scene.remove(this.mapGroup); this.mapGroup.traverse(o=>{ if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose && o.material.dispose(); }); }
+    const group = new THREE.Group();
+    // Resize ground to map size
+    this.ground.geometry.dispose();
+    this.ground.geometry = new THREE.PlaneGeometry(map.width, map.height);
+    // Lane segments
+    const laneWidth = 40;
+    const laneMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, metalness: 0.0, roughness: 1.0 });
+    for (let i = 1; i < map.path.length; i++) {
+      const a = map.path[i - 1];
+      const b = map.path[i];
+      const dx = b.x - a.x; const dz = b.y - a.y; // map y -> world z
+      const len = Math.hypot(dx, dz);
+      if (len < 1) continue;
+      const midx = (a.x + b.x) / 2; const midz = (a.y + b.y) / 2;
+      const seg = new THREE.Mesh(new THREE.PlaneGeometry(len, laneWidth), laneMat);
+      seg.rotation.x = -Math.PI / 2;
+      seg.position.set(midx, 0.1, midz);
+      const yaw = Math.atan2(dz, dx);
+      seg.rotation.z = 0;
+      seg.rotation.y = yaw; // align along segment
+      group.add(seg);
+    }
+    // Bases markers
+    const baseGeo = new THREE.CylinderGeometry(20, 20, 6, 20);
+    const baseRadiant = new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial({ color: 0x16a34a }));
+    baseRadiant.position.set(map.radiantBase.x, 3, map.radiantBase.y);
+    group.add(baseRadiant);
+    const baseDire = new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
+    baseDire.position.set(map.direBase.x, 3, map.direBase.y);
+    group.add(baseDire);
+    // Sparse trees outside lane
+    const treeMat = new THREE.MeshStandardMaterial({ color: 0x14532d });
+    const treeGeo = new THREE.ConeGeometry(10, 24, 8);
+    for (let x = 80; x < map.width; x += 200) {
+      for (let y = 80; y < map.height; y += 200) {
+        if (this.isNearLane({ x, y }, map.path, 80)) continue;
+        const t = new THREE.Mesh(treeGeo, treeMat);
+        t.position.set(x, 12, y);
+        group.add(t);
+      }
+    }
+    this.scene.add(group);
+    this.mapGroup = group;
+  }
+
+  isNearLane(point, path, threshold) {
+    for (let i = 1; i < path.length; i++) {
+      const a = path[i - 1]; const b = path[i];
+      const d = this.pointToSegmentDistance(point.x, point.y, a.x, a.y, b.x, b.y);
+      if (d <= threshold) return true;
+    }
+    return false;
+  }
+
+  pointToSegmentDistance(px, py, x1, y1, x2, y2) {
+    const vx = x2 - x1, vy = y2 - y1;
+    const wx = px - x1, wy = py - y1;
+    const c1 = vx * wx + vy * wy;
+    if (c1 <= 0) return Math.hypot(px - x1, py - y1);
+    const c2 = vx * vx + vy * vy;
+    if (c2 <= c1) return Math.hypot(px - x2, py - y2);
+    const b = c1 / c2;
+    const bx = x1 + b * vx; const by = y1 + b * vy;
+    return Math.hypot(px - bx, py - by);
   }
 
   updateEntities(game) {
