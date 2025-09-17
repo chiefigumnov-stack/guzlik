@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dota Clone (Minimal)</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <canvas id="webgl"></canvas>
+    <canvas id="game" tabindex="0"></canvas>
+    <div id="overlay">
+      <div class="title">Dota Clone — минимальный прототип</div>
+      <div class="help">
+        Управление: 3D — клик (захват мыши), мышь — камера, WASD — ходьба, Q/E/R — способности, F — рывок, 1/2/9/0 — апгрейд, 3–8 — предметы, P/O — пауза, K — рестарт.
+      </div>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+  </html>
+
