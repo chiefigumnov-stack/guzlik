@@ -23,6 +23,22 @@ function init() {
     game.handleResize();
     renderer3d.resize();
   });
+  // Pointer lock for smooth yaw
+  webglCanvas.addEventListener('click', () => {
+    if (document.pointerLockElement !== webglCanvas) webglCanvas.requestPointerLock();
+  });
+  document.addEventListener('pointerlockchange', () => {
+    if (document.pointerLockElement === webglCanvas) {
+      window.addEventListener('mousemove', onLockedMove);
+    } else {
+      window.removeEventListener('mousemove', onLockedMove);
+    }
+  });
+  function onLockedMove(e) {
+    // pass relative movement to game input
+    game.input.mouseDeltaX += e.movementX || 0;
+    game.input.mouseDeltaY += e.movementY || 0;
+  }
   function render3dLoop() {
     renderer3d.draw(game);
     requestAnimationFrame(render3dLoop);

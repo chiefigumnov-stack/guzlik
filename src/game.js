@@ -333,11 +333,13 @@ export class Game {
   render() {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    this.map.draw(ctx, this.camera);
+    // If 3D mode, skip world background (HUD only)
+    if (!this.mode3p) this.map.draw(ctx, this.camera);
 
     // Transform to world
-    ctx.save();
-    this.camera.applyWorldTransform(ctx, ctx.canvas.width, ctx.canvas.height);
+    if (!this.mode3p) {
+      ctx.save();
+      this.camera.applyWorldTransform(ctx, ctx.canvas.width, ctx.canvas.height);
 
     // Runes
     for (const r of this.runes) {
@@ -346,9 +348,10 @@ export class Game {
       ctx.beginPath(); ctx.arc(r.x, r.y, 10, 0, Math.PI * 2); ctx.fill();
     }
 
-    // Entities
-    for (const e of this.entities) this.drawEntity(ctx, e);
-    ctx.restore();
+      // Entities
+      for (const e of this.entities) this.drawEntity(ctx, e);
+      ctx.restore();
+    }
 
     // UI
     this.ui.drawWorldBars(ctx, this.camera);

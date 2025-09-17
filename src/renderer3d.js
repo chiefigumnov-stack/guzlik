@@ -52,13 +52,14 @@ export class Renderer3D {
   }
 
   updateCameraFromGame(game) {
-    const focus = { x: game.camera.x, z: game.camera.y };
+    const hero = game.hero || { x: game.camera.x, y: game.camera.y };
     const yaw = game._cameraYaw || -Math.PI / 4;
-    const dist = 420; const height = 360;
-    this.camera.position.x = focus.x + Math.cos(yaw) * dist;
-    this.camera.position.z = focus.z + Math.sin(yaw) * dist;
-    this.camera.position.y = height;
-    this.camera.lookAt(focus.x, 0, focus.z);
+    const dist = 420, height = 320, lookAhead = 80;
+    const fx = Math.cos(yaw), fz = Math.sin(yaw);
+    const cx = hero.x - fx * dist;
+    const cz = hero.y - fz * dist;
+    this.camera.position.set(cx, height, cz);
+    this.camera.lookAt(hero.x + fx * lookAhead, 0, hero.y + fz * lookAhead);
     this.camera.updateProjectionMatrix();
   }
 
@@ -99,6 +100,7 @@ export class Renderer3D {
       }
       // Update transform: map world (x,y) -> (x, z)
       obj.position.set(e.x, 0, e.y);
+      if (e.facing != null) obj.rotation.y = -e.facing;
       if (e.type === 'projectile') {
         // face forward along velocity approximated via target or skip
       }
